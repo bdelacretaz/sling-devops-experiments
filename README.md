@@ -1,6 +1,7 @@
 # Sling Devops Experiments, volume 1
 
-This is the first of a series of experiments about how Sling can be made more devops-friendly.
+This is the first of a series of experiments about how [Apache Sling](http://sling.apache.org)
+ can be made more devops-friendly.
 
 The goal of this experiment is to implement a simple cluster controller that detects available
 Sling instances, and controls an HTTP load balancer front end to implement an atomic switch
