@@ -34,8 +34,8 @@ When the cluster controller detects that N C2 instances are active, it reconfigu
 load balancer to switch to them atomically, so that front-end clients see only C2 responses
 from this point on.
 
-The C1 instances can then be shutdown, as soon as they done processing any outstanding
+The C1 instances can then be shutdown, as soon as they are done processing any outstanding
 requests.
 
-To verify the scenario, the HTTP clients should verify that they see an atomic switch
+To test the implementation, the HTTP clients should verify that they see an atomic switch
 from C1 to C2 with no interruption.
