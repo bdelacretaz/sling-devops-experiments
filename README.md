@@ -17,13 +17,17 @@ we can start the Sling instances manually with the appropriate configs.
 ![System structure and scenario](./sling-devops-vol1.jpg)
 
 Each Sling instance announces itself to Zookeeper with its IP adress and port, indicating
-which config it is running.
+which config it is running. A Sling StartupListener service can be used to trigger this
+announce when Sling is ready.
+
+The Sling instances can run on different hosts, as long as they can access Zookeeper and
+as long as the front-end can access them.
 
 The cluster controller first waits for N instances to be available with the C1 config, and
 configures the load balancer to use those once they are available.
 
 Later, we start N additional instances with the C2 config, which also announce themselves
-to Zookeeper.
+to Zookeeper. 
 
 When the cluster controller detects that N C2 instances are active, it reconfigures the
 load balancer to switch to them atomically, so that front-end clients see only C2 responses
