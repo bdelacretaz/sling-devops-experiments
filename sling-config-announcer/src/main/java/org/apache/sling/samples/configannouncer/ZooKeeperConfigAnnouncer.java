@@ -6,13 +6,13 @@ import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
 import org.apache.felix.scr.annotations.Service;
+import org.apache.sling.devops.zookeeper.ZooKeeperConnector;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooDefs;
-import org.apache.zookeeper.ZooKeeper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,10 +22,9 @@ public class ZooKeeperConfigAnnouncer extends ConfigAnnouncer {
 
 	private static final Logger logger = LoggerFactory.getLogger(ZooKeeperConfigAnnouncer.class);
 
-	public static final String ZK_ROOT = "sling"; // no hierarchy, top-level node name only
-	public static final int ZK_SESSION_TIMEOUT = 30 * 1000;
+	public static final String ZK_ROOT = "/sling"; // no hierarchy, top-level node name only
 
-	private ZooKeeper zooKeeper;
+	private ZooKeeperConnector zkConnector;
 
 	@Override
 	public void announceConfig() {
@@ -36,7 +35,7 @@ public class ZooKeeperConfigAnnouncer extends ConfigAnnouncer {
 		String zkPath = "/" + this.getSlingId();
 
 		// Delete existing node, if any
-		this.zooKeeper.delete(
+		this.zkConnector.getZooKeeper().delete(
 				zkPath,
 				-1,
 				new AsyncCallback.VoidCallback() {
@@ -49,7 +48,7 @@ public class ZooKeeperConfigAnnouncer extends ConfigAnnouncer {
 				);
 
 		// Create node with info
-		this.zooKeeper.create(
+		this.zkConnector.getZooKeeper().create(
 				zkPath,
 				String.format("config=%s;endpoints=%s", config, endpoints).getBytes(),
 				ZooDefs.Ids.OPEN_ACL_UNSAFE,
@@ -60,7 +59,7 @@ public class ZooKeeperConfigAnnouncer extends ConfigAnnouncer {
 						switch (Code.get(code)) {
 						case NODEEXISTS:
 							logger.warn("Node exists, could not create.");
-							ZooKeeperConfigAnnouncer.this.closeZooKeeper();
+							ZooKeeperConfigAnnouncer.this.closeZooKeeperConnector();
 							break;
 						case OK:
 							logger.info("Node created.");
@@ -77,51 +76,27 @@ public class ZooKeeperConfigAnnouncer extends ConfigAnnouncer {
 	protected void onActivate() throws IOException {
 		String zkConnectionString = System.getProperty("zookeeper.connString"); // TODO
 		if (zkConnectionString == null) zkConnectionString = "localhost:2181";
-		this.initializeZooKeeper(zkConnectionString + "/" + ZK_ROOT);
-	}
-
-	@Deactivate
-	protected void onDeactivate() {
-		this.closeZooKeeper();
-	}
-
-	private void initializeZooKeeper(String connectionString) throws IOException {
-		this.zooKeeper = new ZooKeeper(
-				connectionString,
-				ZK_SESSION_TIMEOUT,
+		this.zkConnector = new ZooKeeperConnector(
+				zkConnectionString + ZK_ROOT,
 				new Watcher() {
 					@Override
 					public void process(WatchedEvent event) {
 						if (event.getType() != Event.EventType.None) {
 							// our node changed, maybe another instance has the same ID?
 							logger.warn("Node was changed, closing ZooKeeper connection.");
-							ZooKeeperConfigAnnouncer.this.closeZooKeeper();
+							ZooKeeperConfigAnnouncer.this.closeZooKeeperConnector();
 						}
 					}
-				});
-
-		this.zooKeeper.create(
-				"/",
-				null,
-				ZooDefs.Ids.OPEN_ACL_UNSAFE,
-				CreateMode.PERSISTENT,
-				new AsyncCallback.StringCallback() {
-					@Override
-					public void processResult(int code, String path, Object ctx, String ret) {
-						// either created or already exists, doesn't matter
-						logger.info("ZooKeeper connection established.");
-					}
-				},
-				null // ctx
+				}
 				);
 	}
 
-	private void closeZooKeeper() {
-		try {
-			this.zooKeeper.close();
-		} catch (InterruptedException e) {
-			// empty
-		}
-		logger.info("ZooKeeper connection closed.");
+	@Deactivate
+	protected void onDeactivate() {
+		this.closeZooKeeperConnector();
+	}
+
+	private void closeZooKeeperConnector() {
+		this.zkConnector.close();
 	}
 }
