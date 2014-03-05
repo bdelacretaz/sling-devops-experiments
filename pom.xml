@@ -11,7 +11,7 @@
 	<artifactId>org.apache.sling.devops</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>bundle</packaging>
-	<name>Apache Sling Config Announcer</name>
+	<name>Apache Sling DevOps Tools</name>
 
 	<build>
 		<plugins>
