@@ -1,4 +1,4 @@
-package org.apache.sling.samples.configannouncer;
+package org.apache.sling.devops.api.instance;
 
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Reference;

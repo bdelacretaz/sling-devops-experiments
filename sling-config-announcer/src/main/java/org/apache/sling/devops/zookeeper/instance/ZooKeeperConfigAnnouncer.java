@@ -1,4 +1,4 @@
-package org.apache.sling.samples.configannouncer;
+package org.apache.sling.devops.zookeeper.instance;
 
 import java.io.IOException;
 
@@ -6,6 +6,7 @@ import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
 import org.apache.felix.scr.annotations.Service;
+import org.apache.sling.devops.api.instance.ConfigAnnouncer;
 import org.apache.sling.devops.zookeeper.ZooKeeperConnector;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
