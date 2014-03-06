@@ -55,11 +55,11 @@ public class ZooKeeperConfigAnnouncer extends ConfigAnnouncer {
 				CreateMode.EPHEMERAL,
 				new AsyncCallback.StringCallback() {
 					@Override
-					public void processResult(int code, String path, Object ctx, String ret) {
+					public void processResult(int code, String path, Object ctx, String name) {
 						switch (Code.get(code)) {
 						case NODEEXISTS:
 							logger.warn("Node exists, could not create.");
-							ZooKeeperConfigAnnouncer.this.closeZooKeeperConnector();
+							ZooKeeperConfigAnnouncer.this.zkConnector.close();
 							break;
 						case NONODE:
 						case OK:
@@ -69,11 +69,11 @@ public class ZooKeeperConfigAnnouncer extends ConfigAnnouncer {
 									true,
 									new AsyncCallback.StatCallback() {
 										@Override
-										public void processResult(int code, String path, Object ctx, Stat ret) {
+										public void processResult(int code, String path, Object ctx, Stat stat) {
 											switch (Code.get(code)) {
 											case NONODE:
 												logger.warn("Node doesn't exist, could not watch.");
-												ZooKeeperConfigAnnouncer.this.closeZooKeeperConnector();
+												ZooKeeperConfigAnnouncer.this.zkConnector.close();
 												break;
 											case OK:
 												logger.info("Node created.");
@@ -109,10 +109,6 @@ public class ZooKeeperConfigAnnouncer extends ConfigAnnouncer {
 
 	@Deactivate
 	protected void onDeactivate() {
-		this.closeZooKeeperConnector();
-	}
-
-	private void closeZooKeeperConnector() {
 		this.zkConnector.close();
 	}
 }

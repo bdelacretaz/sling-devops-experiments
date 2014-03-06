@@ -5,7 +5,6 @@ import java.io.IOException;
 
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
@@ -13,7 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ZooKeeperConnector implements Closeable {
-	
+
 	private static final Logger logger = LoggerFactory.getLogger(ZooKeeperConnector.class);
 
 	public static final String ZK_CONNECTION_STRING;
@@ -26,7 +25,7 @@ public class ZooKeeperConnector implements Closeable {
 	public static final int ZK_SESSION_TIMEOUT = 30 * 1000;
 
 	private final ZooKeeper zooKeeper;
-	
+
 	public ZooKeeperConnector(Watcher watcher) throws IOException {
 		this(ZK_CONNECTION_STRING, ZK_SESSION_TIMEOUT, watcher);
 	}
@@ -54,7 +53,7 @@ public class ZooKeeperConnector implements Closeable {
 				null // ctx
 				);
 	}
-	
+
 	public ZooKeeper getZooKeeper() {
 		return this.zooKeeper;
 	}
