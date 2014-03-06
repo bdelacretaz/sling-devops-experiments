@@ -1,0 +1,52 @@
+package org.apache.sling.devops.orchestrator;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+import org.apache.sling.devops.Instance;
+
+public abstract class InstanceManager {
+
+	private final Map<String, Instance> instances = new HashMap<>();
+	private final Map<String, String> bestEndpoints = new HashMap<>();
+	private final Map<String, Set<String>> configEndpoints = new HashMap<>();
+
+	public Set<String> getEndpoints(String config) {
+		if (!this.configEndpoints.containsKey(config)) return new HashSet<String>();
+		return this.configEndpoints.get(config);
+	}
+
+	public void addInstance(Instance instance) {
+		if (instance == null) throw new IllegalArgumentException("Instance cannot be null.");
+		if (instance.getEndpoints().isEmpty()) return;
+		String bestEndpoint = this.pickBestEndpoint(instance.getEndpoints());
+		if (bestEndpoint != null) {
+			this.instances.put(instance.getId(), instance);
+			this.bestEndpoints.put(instance.getId(), bestEndpoint);
+			String config = instance.getConfig();
+			if (!this.configEndpoints.containsKey(config)) {
+				this.configEndpoints.put(config, new HashSet<String>());
+			}
+			this.configEndpoints.get(config).add(bestEndpoint);
+			if (this.isConfigSatisfied(config)) this.onConfigSatisfied(config);
+		}
+	}
+
+	public void removeInstance(String id) {
+		if (id == null) throw new IllegalArgumentException("ID cannot be null.");
+		Instance instance = this.instances.remove(id);
+		String bestEndpoint = this.bestEndpoints.remove(id);
+		if (instance != null && this.configEndpoints.containsKey(instance.getConfig())) {
+			this.configEndpoints.get(instance.getConfig()).remove(bestEndpoint);
+		}
+	}
+
+	public abstract boolean isConfigSatisfied(String config);
+	public abstract void onConfigSatisfied(String config);
+
+	private String pickBestEndpoint(Set<String> endpoints) {
+		return endpoints.iterator().next(); // TODO
+	}
+}
