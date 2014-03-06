@@ -24,8 +24,6 @@ public class ZooKeeperConfigAnnouncer extends ConfigAnnouncer {
 
 	private static final Logger logger = LoggerFactory.getLogger(ZooKeeperConfigAnnouncer.class);
 
-	public static final String ZK_ROOT = "/sling"; // no hierarchy, top-level node name only
-
 	private ZooKeeperConnector zkConnector;
 
 	@Override
@@ -97,21 +95,16 @@ public class ZooKeeperConfigAnnouncer extends ConfigAnnouncer {
 
 	@Activate
 	protected void onActivate() throws IOException {
-		String zkConnectionString = System.getProperty("zookeeper.connString"); // TODO
-		if (zkConnectionString == null) zkConnectionString = "localhost:2181";
-		this.zkConnector = new ZooKeeperConnector(
-				zkConnectionString + ZK_ROOT,
-				new Watcher() {
-					@Override
-					public void process(WatchedEvent event) {
-						if (event.getType() != Event.EventType.None) {
-							// our node changed, maybe another instance has the same ID?
-							logger.warn("Node was changed, closing ZooKeeper connection.");
-							ZooKeeperConfigAnnouncer.this.closeZooKeeperConnector();
-						}
-					}
+		this.zkConnector = new ZooKeeperConnector(new Watcher() {
+			@Override
+			public void process(WatchedEvent event) {
+				if (event.getType() != Event.EventType.None) {
+					// our node changed, maybe another instance has the same ID?
+					logger.warn("Node was changed, closing ZooKeeper connection.");
+					ZooKeeperConfigAnnouncer.this.zkConnector.close();
 				}
-				);
+			}
+		});
 	}
 
 	@Deactivate

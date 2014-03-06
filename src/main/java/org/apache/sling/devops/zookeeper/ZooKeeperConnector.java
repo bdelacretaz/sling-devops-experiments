@@ -15,18 +15,25 @@ import org.slf4j.LoggerFactory;
 public class ZooKeeperConnector implements Closeable {
 	
 	private static final Logger logger = LoggerFactory.getLogger(ZooKeeperConnector.class);
-	
+
+	public static final String ZK_CONNECTION_STRING;
+	static {
+		String connectionString = System.getProperty("zookeeper.connString"); // TODO
+		if (connectionString == null) connectionString = "localhost:2181";
+		ZK_CONNECTION_STRING = connectionString;
+	}
+	public static final String ZK_ROOT = "/sling"; // no hierarchy, top-level node name only
 	public static final int ZK_SESSION_TIMEOUT = 30 * 1000;
-	
+
 	private final ZooKeeper zooKeeper;
 	
-	public ZooKeeperConnector(String connectionString, Watcher watcher) throws IOException {
-		this(connectionString, ZK_SESSION_TIMEOUT, watcher);
+	public ZooKeeperConnector(Watcher watcher) throws IOException {
+		this(ZK_CONNECTION_STRING, ZK_SESSION_TIMEOUT, watcher);
 	}
 
 	public ZooKeeperConnector(String connectionString, int sessionTimeout, Watcher watcher) throws IOException {
 		this.zooKeeper = new ZooKeeper(
-				connectionString,
+				connectionString + ZK_ROOT,
 				sessionTimeout,
 				watcher
 				);
