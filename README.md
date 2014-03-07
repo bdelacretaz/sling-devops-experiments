@@ -39,3 +39,50 @@ requests.
 
 To test the implementation, the HTTP clients should verify that they see an atomic switch
 from C1 to C2 with no interruption.
+
+## Implementation details
+
+The component referred to as "cluster controller" above can be implemented simply as a
+special Sling instance because it inherits all the benefits of Sling.
+
+The prototype is therefore implemented as a collection of three Maven modules:
+* `orchestrator`: component running on the cluster controller, referred to as the Orchestrator
+* `minion`: component running on each individual Sling instance, referred to as a Minion
+* `common`: contains classes shared between the implementations of the above two components
+
+## Running
+
+Notes:
+* httpd, mod_proxy, and mod_proxy_balancer must be installed (maybe some other modules as well)
+* httpd.conf must "Include" a separate config file inside its <Proxy> directive. This
+separate config file will contain the BalancerMember list.
+* To restart httpd usually a sudo password is required. It can be provided as a parameter
+(below), or instead the sudoers file can be edited to include the following line:
+```
+myuser	ALL=(ALL) NOPASSWD: /usr/sbin/apachectl
+```
+
+where `myuser` is the username under which the Sling instance will be running (must have
+administrative privileges) and `/usr/sbin/apachectl` must be updated appropriately.
+
+The following system properties (passed via `-D` option of the `java` command) must be
+available on the Sling instances:
+* Minion
+** `sling.devops.zookeeper.connString`: ZooKeeper connection string (defaults to
+`localhost:2181`)
+** `sling.devops.config`: config of the instance
+* Orchestrator
+** `sling.devops.zookeeper.connString`: as above
+** `sling.devops.proxy.executable`: path to the httpd executable (defaults to `apachectl`)
+** `sling.devops.proxy.configPath`: path to the proxy config file as mentioned above
+(defaults to `/private/etc/apache2/mod_proxy_balancer.conf`)
+** `sling.devops.orchestrator.n`: the parameter N (smallest number of instances that must
+be running a new config before it is transitioned to; defaults to 2)
+** `sudo.password`: the sudo password, required if the `apachectl` restart requires sudo
+
+ZooKeeper 3.3.6 and Common bundles must be installed on all instances. Minion bundle must
+be installed on minion instances, and correspondingly the Orchestrator bundle on the
+Orchestrator instance. Everything then starts up and runs automatically:
+* some information is printed in the log
+* the information is exchanged via the `/sling` node in ZooKeeper
+* the proxy config file is updated as soon as N Sling instances with the same config are available
