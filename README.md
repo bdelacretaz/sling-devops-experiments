@@ -61,9 +61,24 @@ separate config file will contain the `BalancerMember` list.
   ```
   myuser	ALL=(ALL) NOPASSWD: /usr/sbin/apachectl
   ```
-
-where `myuser` is the username under which the Sling instance will be running (must have
+  where `myuser` is the username under which the Sling instance will be running (must have
 administrative privileges) and `/usr/sbin/apachectl` must be updated appropriately.
+
+Example httpd configuration:
+```
+Header add Set-Cookie "ROUTEID=.%{BALANCER_WORKER_ROUTE}e; path=/" env=BALANCER_ROUTE_CHANGED
+<Proxy balancer://mycluster>
+    Include /private/etc/apache2/mod_proxy_balancer.conf
+    ProxySet stickysession=ROUTEID
+</Proxy>
+
+<Location />
+    ProxyPass balancer://mycluster/
+    ProxyPassReverse balancer://mycluster/
+</Location>
+ProxyPreserveHost On
+ProxyRequests Off
+```
 
 The following system properties (passed via `-D` option of the `java` command) must be
 available on the Sling instances:
