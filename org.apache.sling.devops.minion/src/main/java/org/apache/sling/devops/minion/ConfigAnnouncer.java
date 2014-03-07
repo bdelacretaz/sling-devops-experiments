@@ -1,4 +1,4 @@
-package org.apache.sling.devops.instance;
+package org.apache.sling.devops.minion;
 
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Reference;
