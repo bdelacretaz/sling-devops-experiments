@@ -1,37 +1,53 @@
 package org.apache.sling.devops.minion;
 
 import java.io.IOException;
+import java.util.Set;
 
-import org.apache.felix.scr.annotations.Activate;
-import org.apache.felix.scr.annotations.Component;
-import org.apache.felix.scr.annotations.Deactivate;
-import org.apache.felix.scr.annotations.Service;
+import org.apache.sling.devops.Instance;
 import org.apache.sling.devops.zookeeper.ZooKeeperConnector;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException.Code;
-import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooDefs;
+import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Component(immediate=true)
-@Service
-public class ZooKeeperConfigAnnouncer extends ConfigAnnouncer {
+public class ZooKeeperInstanceAnnouncer implements InstanceAnnouncer {
 
-	private static final Logger logger = LoggerFactory.getLogger(ZooKeeperConfigAnnouncer.class);
+	private static final Logger logger = LoggerFactory.getLogger(ZooKeeperInstanceAnnouncer.class);
 
 	private ZooKeeperConnector zkConnector;
 
+	public ZooKeeperInstanceAnnouncer() throws IOException {
+		this.zkConnector = new ZooKeeperConnector(new Watcher() {
+			@Override
+			public void process(WatchedEvent event) {
+				if (event.getType() != Event.EventType.None) {
+					// our node changed, maybe another instance has the same ID?
+					logger.warn("Node was changed, closing ZooKeeper connection.");
+					ZooKeeperInstanceAnnouncer.this.zkConnector.close();
+				}
+			}
+		});
+	}
+
 	@Override
-	public void announceConfig() {
-		String config = this.getConfig();
-		String endpoints = this.getEndpoints();
+	public void announce(Instance instance) {
+		String config = instance.getConfig();
+		Set<String> endpoints = instance.getEndpoints();
 		logger.info("Announcing config={}, endpoints={}", config, endpoints);
 
-		final String zkPath = "/" + this.getSlingId();
+		StringBuilder endpointString = new StringBuilder();
+		String prefix = "";
+		for (String endpoint : endpoints) {
+			endpointString.append(prefix);
+			endpointString.append(endpoint);
+			prefix = ",";
+		}
+		final String zkPath = "/" + instance.getId();
 
 		// Delete existing node, if any
 		this.zkConnector.getZooKeeper().delete(
@@ -49,7 +65,7 @@ public class ZooKeeperConfigAnnouncer extends ConfigAnnouncer {
 		// Create node with info
 		this.zkConnector.getZooKeeper().create(
 				zkPath,
-				String.format("config=%s;endpoints=%s", config, endpoints).getBytes(),
+				String.format("config=%s;endpoints=%s", config, endpointString).getBytes(),
 				ZooDefs.Ids.OPEN_ACL_UNSAFE,
 				CreateMode.EPHEMERAL,
 				new AsyncCallback.StringCallback() {
@@ -58,12 +74,12 @@ public class ZooKeeperConfigAnnouncer extends ConfigAnnouncer {
 						switch (Code.get(code)) {
 						case NODEEXISTS:
 							logger.warn("Node exists, could not create.");
-							ZooKeeperConfigAnnouncer.this.zkConnector.close();
+							ZooKeeperInstanceAnnouncer.this.zkConnector.close();
 							break;
 						case NONODE:
 						case OK:
 							// set a watch on node
-							ZooKeeperConfigAnnouncer.this.zkConnector.getZooKeeper().exists(
+							ZooKeeperInstanceAnnouncer.this.zkConnector.getZooKeeper().exists(
 									zkPath,
 									true,
 									new AsyncCallback.StatCallback() {
@@ -72,7 +88,7 @@ public class ZooKeeperConfigAnnouncer extends ConfigAnnouncer {
 											switch (Code.get(code)) {
 											case NONODE:
 												logger.warn("Node doesn't exist, could not watch.");
-												ZooKeeperConfigAnnouncer.this.zkConnector.close();
+												ZooKeeperInstanceAnnouncer.this.zkConnector.close();
 												break;
 											case OK:
 												logger.info("Node created.");
@@ -92,22 +108,8 @@ public class ZooKeeperConfigAnnouncer extends ConfigAnnouncer {
 				);
 	}
 
-	@Activate
-	protected void onActivate() throws IOException {
-		this.zkConnector = new ZooKeeperConnector(new Watcher() {
-			@Override
-			public void process(WatchedEvent event) {
-				if (event.getType() != Event.EventType.None) {
-					// our node changed, maybe another instance has the same ID?
-					logger.warn("Node was changed, closing ZooKeeper connection.");
-					ZooKeeperConfigAnnouncer.this.zkConnector.close();
-				}
-			}
-		});
-	}
-
-	@Deactivate
-	protected void onDeactivate() {
+	@Override
+	public void close() {
 		this.zkConnector.close();
 	}
 }
