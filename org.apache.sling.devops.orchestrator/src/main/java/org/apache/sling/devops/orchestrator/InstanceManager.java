@@ -7,7 +7,7 @@ import java.util.Set;
 
 import org.apache.sling.devops.Instance;
 
-public abstract class InstanceManager {
+public class InstanceManager {
 
 	private final Map<String, Instance> instances = new HashMap<>();
 	private final Map<String, String> bestEndpoints = new HashMap<>();
@@ -30,7 +30,6 @@ public abstract class InstanceManager {
 				this.configEndpoints.put(config, new HashSet<String>());
 			}
 			this.configEndpoints.get(config).add(bestEndpoint);
-			if (this.isConfigSatisfied(config)) this.onConfigSatisfied(config);
 		}
 	}
 
@@ -42,9 +41,6 @@ public abstract class InstanceManager {
 			this.configEndpoints.get(instance.getConfig()).remove(bestEndpoint);
 		}
 	}
-
-	public abstract boolean isConfigSatisfied(String config);
-	public abstract void onConfigSatisfied(String config);
 
 	private String pickBestEndpoint(Set<String> endpoints) {
 		return endpoints.iterator().next(); // TODO
