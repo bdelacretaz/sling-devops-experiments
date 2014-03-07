@@ -33,4 +33,26 @@ public class Instance {
 	public Set<String> getEndpoints() {
 		return this.endpoints;
 	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + this.getConfig().hashCode();
+		result = prime * result + this.getEndpoints().hashCode();
+		result = prime * result + this.getId().hashCode();
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) return true;
+		if (obj != null && obj instanceof Instance) {
+			Instance that = (Instance)obj;
+			return this.getId().equals(that.getId())
+					&& this.getConfig().equals(that.getConfig())
+					&& this.getEndpoints().equals(that.getEndpoints());
+		}
+		return false;
+	}
 }
