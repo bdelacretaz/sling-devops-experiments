@@ -27,7 +27,7 @@ public abstract class ConfigAnnouncer implements StartupListener {
 	}
 
 	public String getConfig() {
-		return System.getProperty("sling.config"); // TODO
+		return System.getProperty("sling.devops.config"); // TODO
 	}
 
 	public abstract void announceConfig();

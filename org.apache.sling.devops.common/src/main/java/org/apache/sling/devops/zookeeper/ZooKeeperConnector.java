@@ -17,7 +17,7 @@ public class ZooKeeperConnector implements Closeable {
 
 	public static final String ZK_CONNECTION_STRING;
 	static {
-		String connectionString = System.getProperty("zookeeper.connString"); // TODO
+		String connectionString = System.getProperty("sling.devops.zookeeper.connString"); // TODO
 		if (connectionString == null) connectionString = "localhost:2181";
 		ZK_CONNECTION_STRING = connectionString;
 	}
