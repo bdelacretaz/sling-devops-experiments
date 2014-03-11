@@ -37,6 +37,7 @@ public class ModProxyConfigTransitioner implements ConfigTransitioner {
 						));
 			}
 		}
+		logger.info("Proxy config {} rewritten for instances {}", this.filePath, instances);
 
 		// Relaunch proxy
 		Process process = new ProcessBuilder("sudo", "-k", "-S", this.proxyExecutable, "graceful").start();
