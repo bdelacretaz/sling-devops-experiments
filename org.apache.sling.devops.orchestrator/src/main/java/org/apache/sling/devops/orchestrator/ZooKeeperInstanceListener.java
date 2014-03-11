@@ -150,9 +150,8 @@ public abstract class ZooKeeperInstanceListener implements InstanceListener {
 				}
 			}
 			logger.info(
-					"Instances updated from version {} to version {}.",
-					this.currentVersion,
-					version
+					"Instances updated from version {} to version {}: {}",
+					new Object [] { this.currentVersion, version, this.currentInstances.values() }
 					);
 			this.currentVersion = version;
 		}

@@ -21,6 +21,11 @@ public class Instance {
 		this.config = config;
 		this.endpoints = Collections.unmodifiableSet(new HashSet<>(endpoints));
 	}
+	
+	@Override
+	public String toString() {
+	    return getClass().getSimpleName() + " (" + this.config + ") " + this.endpoints;
+	}
 
 	public String getId() {
 		return this.id;
