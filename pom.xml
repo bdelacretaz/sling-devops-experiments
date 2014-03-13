@@ -11,13 +11,27 @@
 	<artifactId>org.apache.sling.devops</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>pom</packaging>
-	<name>Apache Sling DevOps Tools</name>
+	<name>Apache Sling DevOps</name>
 
-	<modules>
-		<module>org.apache.sling.devops.common</module>
-		<module>org.apache.sling.devops.minion</module>
-		<module>org.apache.sling.devops.orchestrator</module>
-	</modules>
+	<profiles>
+		<profile>
+			<id>release</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<modules>
+				<module>org.apache.sling.devops.common</module>
+				<module>org.apache.sling.devops.minion</module>
+				<module>org.apache.sling.devops.orchestrator</module>
+			</modules>
+		</profile>
+		<profile>
+			<id>tools</id>
+			<modules>
+				<module>org.apache.sling.devops.tools</module>
+			</modules>
+		</profile>
+	</profiles>
 
 	<!--
 		Build project with Java 7.

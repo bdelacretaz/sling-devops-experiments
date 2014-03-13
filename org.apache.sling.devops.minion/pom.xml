@@ -9,7 +9,7 @@
 
 	<artifactId>org.apache.sling.devops.minion</artifactId>
 	<packaging>bundle</packaging>
-	<name>Apache Sling DevOps Minion Tools</name>
+	<name>Apache Sling DevOps Minion</name>
 
 	<build>
 		<plugins>

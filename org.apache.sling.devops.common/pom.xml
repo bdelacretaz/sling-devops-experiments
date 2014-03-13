@@ -9,7 +9,7 @@
 
 	<artifactId>org.apache.sling.devops.common</artifactId>
 	<packaging>bundle</packaging>
-	<name>Apache Sling DevOps Common Tools</name>
+	<name>Apache Sling DevOps Common</name>
 
 	<build>
 		<plugins>

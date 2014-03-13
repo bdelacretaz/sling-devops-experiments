@@ -9,7 +9,7 @@
 
 	<artifactId>org.apache.sling.devops.orchestrator</artifactId>
 	<packaging>bundle</packaging>
-	<name>Apache Sling DevOps Orchestrator Tools</name>
+	<name>Apache Sling DevOps Orchestrator</name>
 
 	<build>
 		<plugins>
