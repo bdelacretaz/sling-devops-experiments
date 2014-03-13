@@ -102,3 +102,18 @@ Orchestrator instance. Everything then starts up and runs automatically:
 * some information is printed in the log
 * the information is exchanged via the `/sling` node in ZooKeeper
 * the proxy config file is updated as soon as N Sling instances with the same config are available
+
+## Testing
+
+To verify that the switch between the Sling configurations is atomic (from the client point of view), the HttpResourceMonitor tool from the `org.apache.sling.devops.tools` module can be used. This tool sends an HTTP request over and over in a single thread and logs changes in responses.
+
+Usage:
+```
+HttpResourceMonitor [host [resource]]
+```
+
+where
+* `host` is HTTP host (default: `localhost`)
+* `resource` is path to resource on the host (default: `/`)
+
+For now the tool only reports changes in the status lines of responses, so one way to test the switch would be to ensure that our two Sling configurations return different statuses for the same resource. One way to achieve this is to use the Sling root as resource and to "Allow Anonymous Access" on Apache Sling Authentication Service (reachable from `/system/console/configMgr` in one config and disable it in the other. This way, the first config will return status 200, while the second will return 401.
