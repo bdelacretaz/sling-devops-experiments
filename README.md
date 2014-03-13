@@ -61,6 +61,7 @@ separate config file will contain the `BalancerMember` list.
   ```
   myuser	ALL=(ALL) NOPASSWD: /usr/sbin/apachectl
   ```
+
   where `myuser` is the username under which the Sling instance will be running (must have
 administrative privileges) and `/usr/sbin/apachectl` must be updated appropriately.
 
