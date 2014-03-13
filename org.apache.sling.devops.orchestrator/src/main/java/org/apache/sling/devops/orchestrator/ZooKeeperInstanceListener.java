@@ -81,34 +81,36 @@ public abstract class ZooKeeperInstanceListener implements InstanceListener {
 						final Set<Instance> instances = new HashSet<>();
 						final int numChildren = children.size();
 						final int version = stat.getCversion(); // children version
-						for (final String child : children) { // retrieve data of each child
-							ZooKeeperInstanceListener.this.zkConnector.getZooKeeper().getData(
-									"/" + child,
-									false, // do not watch the children!
-									new AsyncCallback.DataCallback() {
-										@Override
-										public void processResult(int code, String path, Object ctx, byte[] data, Stat stat) {
-											if (Code.get(code) != Code.OK) return; // something is wrong
-											String[] dataParts = new String(data).split(";");
-											synchronized (instances) { // serial access so that only one callback sees the set complete
-												instances.add(new Instance(
-														child,
-														dataParts[0].split("=")[1], // config=blah
-														new HashSet<>(Arrays.asList(
-																dataParts[1].split("=")[1].split(",") // endpoints=ep1,ep2,ep3
-																))
-														));
+						if (numChildren > 0) {
+							for (final String child : children) { // retrieve data of each child
+								ZooKeeperInstanceListener.this.zkConnector.getZooKeeper().getData(
+										"/" + child,
+										false, // do not watch the children!
+										new AsyncCallback.DataCallback() {
+											@Override
+											public void processResult(int code, String path, Object ctx, byte[] data, Stat stat) {
+												if (Code.get(code) != Code.OK) return; // something is wrong
+												String[] dataParts = new String(data).split(";");
+												synchronized (instances) { // serial access so that only one callback sees the set complete
+													instances.add(new Instance(
+															child,
+															dataParts[0].split("=")[1], // config=blah
+															new HashSet<>(Arrays.asList(
+																	dataParts[1].split("=")[1].split(",") // endpoints=ep1,ep2,ep3
+																	))
+															));
 
-												// instance info for this version of children is ready? update
-												if (instances.size() == numChildren) {
-													ZooKeeperInstanceListener.this.updateInstances(instances, version);
+													// instance info for this version of children is ready? update
+													if (instances.size() == numChildren) {
+														ZooKeeperInstanceListener.this.updateInstances(instances, version);
+													}
 												}
 											}
-										}
-									},
-									null
-									);
-						}
+										},
+										null
+										);
+							}
+						} else ZooKeeperInstanceListener.this.updateInstances(instances, version);
 					}
 				},
 				null
