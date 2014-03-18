@@ -23,7 +23,7 @@ consisting of a rendering script that combines values provided by an OSGi servic
 The demo scenario then upgrades both the OSGi service and rendering script and the test HTTP client verifies
 that the resulting output switches atomically from C1 to C2.
 
-![Sling instances configuration](./sling-devops-vol2.png)
+![Sling instances configuration](./sling-devops-proto-2.png)
 
 The diagram shows how the Sling instances are configured. They all share the same Oak repository,
 but the C1 and C2 sets of instances are configured with different Sling search paths. For a simple example
