@@ -7,9 +7,9 @@ can be made more devops-friendly.
 Building on the atomic configuration switching mechanism of the previous 
 [sling-devops-vol1](https://github.com/bdelacretaz/sling-devops-vol1) experiment, we add more 
 realistic Sling configurations to the Sling instances, to demonstrate atomic switching of a setup 
-that includes both scripts and OSGi services.  
+that includes both scripts and OSGi services, along with a shared content repository.
 
-For this set of experiments, the term "Sling configuration" includes everything that 
+Note that for this set of experiments the term "Sling configuration" includes everything that 
 defines the behavior of a Sling instance: scripts, OSGi services, OSGi configurations, etc.
 
 The general scenario is similar to the previous experiment, and we use the same 
