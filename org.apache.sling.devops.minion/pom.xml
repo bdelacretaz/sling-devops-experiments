@@ -24,6 +24,7 @@
 				<configuration>
 					<instructions>
 						<Sling-Initial-Content>initial-content</Sling-Initial-Content>
+						<Sling-Test-Regexp>.*Test</Sling-Test-Regexp>
 					</instructions>
 				</configuration>
 			</plugin>
@@ -31,6 +32,14 @@
 	</build>
 
 	<dependencies>
+		<dependency>
+			<groupId>org.osgi</groupId>
+			<artifactId>org.osgi.core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.osgi</groupId>
+			<artifactId>org.osgi.compendium</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-simple</artifactId>
@@ -40,6 +49,43 @@
 			<groupId>org.apache.sling</groupId>
 			<artifactId>org.apache.sling.launchpad.api</artifactId>
 			<version>1.1.0</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.felix</groupId>
+			<artifactId>org.apache.felix.scr</artifactId>
+			<version>1.6.0</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.sling</groupId>
+			<artifactId>org.apache.sling.resourceresolver</artifactId>
+			<version>1.0.6</version>
+			<scope>provided</scope>
+			<optional>true</optional> <!-- not visible -->
+		</dependency>
+		<dependency>
+			<groupId>org.apache.sling</groupId>
+			<artifactId>org.apache.sling.installer.provider.jcr</artifactId>
+			<version>3.1.6</version>
+			<scope>provided</scope>
+			<optional>true</optional> <!-- not visible -->
+		</dependency>
+		<dependency>
+			<groupId>org.apache.sling</groupId>
+			<artifactId>org.apache.sling.hc.core</artifactId>
+			<version>1.1.0</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.sling</groupId>
+			<artifactId>org.apache.sling.junit.core</artifactId>
+			<version>1.0.8</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
