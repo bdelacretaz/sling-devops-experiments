@@ -8,6 +8,7 @@ import org.apache.sling.devops.minion.Minion;
 import org.apache.sling.junit.annotations.SlingAnnotationsTestRunner;
 import org.apache.sling.junit.annotations.TestReference;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.osgi.service.cm.Configuration;
@@ -26,16 +27,14 @@ public class SearchPathTest {
 
 	@Test
 	public void checkJcrResourceResolverFactoryPaths() throws IOException {
-		if (Minion.CONFIG != null) {
-			this.checkPaths(Minion.PID_JCR_RESOURCE_RESOLVER_FACTORY, Minion.PATH_JCR_RESOURCE_RESOLVER_FACTORY);
-		}
+		Assume.assumeNotNull(Minion.CONFIG);
+		this.checkPaths(Minion.PID_JCR_RESOURCE_RESOLVER_FACTORY, Minion.PATH_JCR_RESOURCE_RESOLVER_FACTORY);
 	}
 
 	@Test
 	public void checkJcrInstallerPaths() throws IOException {
-		if (Minion.CONFIG != null) {
-			this.checkPaths(Minion.PID_JCR_INSTALLER, Minion.PATH_JCR_INSTALLER);
-		}
+		Assume.assumeNotNull(Minion.CONFIG);
+		this.checkPaths(Minion.PID_JCR_INSTALLER, Minion.PATH_JCR_INSTALLER);
 	}
 
 	private void checkPaths(String pid, String propertyName) throws IOException {
