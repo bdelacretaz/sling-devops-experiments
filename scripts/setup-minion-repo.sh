@@ -38,7 +38,7 @@ parse_maven_artifact() {
 
 ### Main
 
-if [ "$#" != 2 -o "$#" -gt 3 -o "$1" = '-?' -o "$1" = '--help' ]
+if [ "$#" != 2 -o "$1" = '-?' -o "$1" = '--help' ]
 then
 	show_usage_and_exit
 fi
