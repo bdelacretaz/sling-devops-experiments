@@ -9,6 +9,7 @@ source setup-common.sh
 bundles_common=(
 	"org.apache.sling:org.apache.sling.hc.core:1.1.0"
 	"org.apache.sling:org.apache.sling.junit.core:1.0.8"
+	"org.apache.sling:org.apache.sling.junit.healthcheck:1.0.6"
 	"org.apache.sling:org.apache.sling.hc.webconsole:1.1.0" # useful
 	"org.apache.zookeeper:zookeeper:3.3.6"
 	"org.apache.sling:org.apache.sling.devops.common:0.0.1-SNAPSHOT"
