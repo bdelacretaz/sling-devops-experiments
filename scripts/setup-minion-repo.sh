@@ -3,7 +3,7 @@
 ### Settings
 
 # Common
-source setup-common.sh
+source `dirname $0`/setup-common.sh
 
 # Bundles (as maven dependencies)
 bundles_common=(

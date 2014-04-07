@@ -3,7 +3,7 @@
 ### Settings
 
 # Common
-source setup-common.sh
+source `dirname $0`/setup-common.sh
 
 # Components
 # OS X comes with bash 3.2, so no associative arrays - mimicking by
