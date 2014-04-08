@@ -77,6 +77,13 @@ do
 		curl -silent -u ${login} -X POST -d "action=enable" "${sling}/${req_path_components}/${!pidvar}/${!pidvar}" > /dev/null
 		sleep ${req_sleep}
 	done
+
+	# set servlet resolver cacheSize to 0 (otherwise esp scripts can only be run once)
+	pid_servlet_resolver="org.apache.sling.servlets.resolver.SlingServletResolver"
+	prop_servlet_resolver="servletresolver.cacheSize"
+	echo "  ${pid_servlet_resolver}"
+	curl -u ${login} -X POST -d "${req_configMgr_common}&propertylist=${prop_servlet_resolver}&${prop_servlet_resolver}=0" "${sling}/${req_path_configMgr}/${pid_servlet_resolver}"
+	sleep ${req_sleep}
 done
 
 echo "Done!"
