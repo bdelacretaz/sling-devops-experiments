@@ -16,10 +16,11 @@ public class ModProxyConfigTransitioner implements ConfigTransitioner {
 	private final String filePath;
 	private final String sudoPassword;
 
-	public ModProxyConfigTransitioner(String proxyExecutable, String filePath, String sudoPassword) {
+	public ModProxyConfigTransitioner(String proxyExecutable, String filePath, String sudoPassword) throws IOException, InterruptedException {
 		this.proxyExecutable = proxyExecutable;
 		this.filePath = filePath;
 		this.sudoPassword = sudoPassword;
+		this.execProxyCommand("stop"); // ensure proxy is stopped initially
 	}
 
 	@Override
@@ -40,18 +41,22 @@ public class ModProxyConfigTransitioner implements ConfigTransitioner {
 		logger.info("Proxy config {} rewritten for instances {}", this.filePath, instances);
 
 		// Relaunch proxy
-		Process process = new ProcessBuilder("sudo", "-k", "-S", this.proxyExecutable, "graceful").start();
+		this.execProxyCommand("graceful");
+	}
+
+	private void execProxyCommand(String command) throws IOException, InterruptedException {
+		Process process = new ProcessBuilder("sudo", "-k", "-S", this.proxyExecutable, command).start();
 		try (PrintWriter pw = new PrintWriter(process.getOutputStream())) {
 			pw.println(this.sudoPassword);
 		}
 		int exitValue = process.waitFor();
 		if (exitValue != 0) {
 			try (Scanner errorStream = new Scanner(process.getErrorStream())) {
-				logger.error("Proxy restart exited with value {}, see the following output.", exitValue);
+				logger.error("Proxy command \"{}\" exited with value {}, see the following output.", command, exitValue);
 				while (errorStream.hasNextLine()) logger.error(errorStream.nextLine());
 			}
 		} else {
-			logger.info("Proxy restarted.");
+			logger.info("Proxy command \"{}\" succeeded.", command);
 		}
 	}
 }

@@ -33,7 +33,7 @@ public class Orchestrator {
 	private String currentConfig = "";
 
 	@Activate
-	public void onActivate() throws IOException {
+	public void onActivate() throws IOException, InterruptedException {
 		this.instanceManager = new InstanceManager();
 		this.configTransitioner = new ModProxyConfigTransitioner(PROXY_EXECUTABLE, PROXY_CONFIG_PATH, SUDO_PASSWORD);
 		this.instanceListener = new ZooKeeperInstanceListener() {
