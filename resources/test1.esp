@@ -1,0 +1,2 @@
+[script]: Einz
+[service]: <%= sling.getService(Packages.org.apache.sling.samples.test.MyService).getString() %>
