@@ -25,8 +25,8 @@ parse_and_check_maven_artifacts() {
 		local jar=$(parse_maven_artifact ${artifact})
 		if ! (ls ${jar} &> /dev/null)
 		then
-			echo "  ${jar} not found, please ensure all Maven artifacts are in your local repository, exiting"
-			echo "  (* hint: execute \"mvn dependency:get -Dartifact=${artifact}\")"
+			echo "  ${jar} not found, please ensure all Maven artifacts are in your local repository, exiting" >& 2
+			echo "  (* hint: execute \"mvn dependency:get -Dartifact=${artifact}\")" >& 2
 			exit -1
 		fi
 		jars+=(${jar})
