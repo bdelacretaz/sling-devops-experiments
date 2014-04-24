@@ -1,0 +1,203 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# Vagrantfile API/syntax version. Don't touch unless you know what you're doing!
+VAGRANTFILE_API_VERSION = "2"
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  # All Vagrant configuration is done here. The most common configuration
+  # options are documented and commented below. For a complete reference,
+  # please see the online documentation at vagrantup.com.
+
+  # Every Vagrant virtual environment requires a box to build off of.
+  config.vm.box = "hashicorp/precise32"
+
+  # The url from where the 'config.vm.box' box will be fetched if it
+  # doesn't already exist on the user's system.
+  # config.vm.box_url = "http://domain.com/path/to/above.box"
+
+  # Create a forwarded port mapping which allows access to a specific port
+  # within the machine from a port on the host machine. In the example below,
+  # accessing "localhost:8080" will access port 80 on the guest machine.
+  # config.vm.network "forwarded_port", guest: 80, host: 8080
+
+  # Create a private network, which allows host-only access to the machine
+  # using a specific IP.
+  # config.vm.network "private_network", ip: "10.10.10.10"
+
+  # Create a public network, which generally matched to bridged network.
+  # Bridged networks make the machine appear as another physical device on
+  # your network.
+  # config.vm.network "public_network"
+
+  # If true, then any SSH connections made will enable agent forwarding.
+  # Default value: false
+  # config.ssh.forward_agent = true
+
+  # Share an additional folder to the guest VM. The first argument is
+  # the path on the host to the actual folder. The second argument is
+  # the path on the guest to mount the folder. And the optional third
+  # argument is a set of non-required options.
+  # config.vm.synced_folder "../data", "/vagrant_data"
+
+  # Provider-specific configuration so you can fine-tune various
+  # backing providers for Vagrant. These expose provider-specific options.
+  # Example for VirtualBox:
+  #
+  # config.vm.provider "virtualbox" do |vb|
+  #   # Don't boot with headless mode
+  #   vb.gui = true
+  #
+  #   # Use VBoxManage to customize the VM. For example to change memory:
+  #   vb.customize ["modifyvm", :id, "--memory", "1024"]
+  # end
+  #
+  # View the documentation for the provider you're using for more
+  # information on available options.
+
+  # Enable provisioning with Puppet stand alone.  Puppet manifests
+  # are contained in a directory path relative to this Vagrantfile.
+  # You will need to create the manifests directory and a manifest in
+  # the file hashicorp/precise32.pp in the manifests_path directory.
+  #
+  # An example Puppet manifest to provision the message of the day:
+  #
+  # # group { "puppet":
+  # #   ensure => "present",
+  # # }
+  # #
+  # # File { owner => 0, group => 0, mode => 0644 }
+  # #
+  # # file { '/etc/motd':
+  # #   content => "Welcome to your Vagrant-built virtual machine!
+  # #               Managed by Puppet.\n"
+  # # }
+  #
+  # config.vm.provision "puppet" do |puppet|
+  #   puppet.manifests_path = "manifests"
+  #   puppet.manifest_file  = "site.pp"
+  # end
+
+  # Enable provisioning with chef solo, specifying a cookbooks path, roles
+  # path, and data_bags path (all relative to this Vagrantfile), and adding
+  # some recipes and/or roles.
+  #
+  # config.vm.provision "chef_solo" do |chef|
+  #   chef.cookbooks_path = "../my-recipes/cookbooks"
+  #   chef.roles_path = "../my-recipes/roles"
+  #   chef.data_bags_path = "../my-recipes/data_bags"
+  #   chef.add_recipe "mysql"
+  #   chef.add_role "web"
+  #
+  #   # You may also specify custom JSON attributes:
+  #   chef.json = { :mysql_password => "foo" }
+  # end
+
+  # Enable provisioning with chef server, specifying the chef server URL,
+  # and the path to the validation key (relative to this Vagrantfile).
+  #
+  # The Opscode Platform uses HTTPS. Substitute your organization for
+  # ORGNAME in the URL and validation key.
+  #
+  # If you have your own Chef Server, use the appropriate URL, which may be
+  # HTTP instead of HTTPS depending on your configuration. Also change the
+  # validation key to validation.pem.
+  #
+  # config.vm.provision "chef_client" do |chef|
+  #   chef.chef_server_url = "https://api.opscode.com/organizations/ORGNAME"
+  #   chef.validation_key_path = "ORGNAME-validator.pem"
+  # end
+  #
+  # If you're using the Opscode platform, your validator client is
+  # ORGNAME-validator, replacing ORGNAME with your organization name.
+  #
+  # If you have your own Chef Server, the default validation client name is
+  # chef-validator, unless you changed the configuration.
+  #
+  #   chef.validation_client_name = "ORGNAME-validator"
+
+  # Mirror sources, results in faster package downloads
+  config.vm.provision "file", source: "sources.list", destination: "sources.list"
+  config.vm.provision "shell", inline: "mv sources.list /etc/apt/"
+
+  # Copy files and bootstrap
+  config.vm.provision "shell", inline: "rm -rf org.apache.sling.devops.* scripts"
+  config.vm.provision "file", source: "../pom.xml", destination: "pom.xml"
+  config.vm.provision "file", source: "../org.apache.sling.devops.common", destination: "."
+  config.vm.provision "file", source: "../org.apache.sling.devops.orchestrator", destination: "."
+  config.vm.provision "file", source: "../org.apache.sling.devops.minion", destination: "."
+  config.vm.provision "file", source: "../scripts", destination: "."
+  config.vm.provision "file", source: "~/Documents/workspace/sling-builder/launchpad/builder/target/org.apache.sling.launchpad-7-SNAPSHOT-standalone.jar", destination: "org.apache.sling.launchpad-7-SNAPSHOT-standalone.jar"
+  config.vm.provision "shell", path: "bootstrap.sh"
+
+  # Configure Orchestrator VM
+  config.vm.define "orchestrator" do |orchestrator|
+    orchestrator.vm.network "private_network", ip: "10.10.10.10"
+
+    # Make apachectl not require sudo
+    orchestrator.vm.provision "file", source: "apache2-sling-frontend.conf", destination: "apache2-sling-frontend.conf"
+    orchestrator.vm.provision "file", source: "apachectl-nopasswd", destination: "apachectl-nopasswd"
+    orchestrator.vm.provision "shell", inline: "chmod 0440 apachectl-nopasswd && chown root.root apachectl-nopasswd && mv apachectl-nopasswd /etc/sudoers.d/"
+
+    # Install additional packages
+    orchestrator.vm.provision "shell", inline: "apt-get install -y python-software-properties" # apt-add-repository command
+    orchestrator.vm.provision "shell", inline: "apt-add-repository ppa:ondrej/apache2" # for latest apache 2.4 instead of 2.2
+    orchestrator.vm.provision "shell", inline: "apt-get update"
+    orchestrator.vm.provision "shell", inline: "apt-get install -y apache2 zookeeperd mongodb"
+
+    # Configure Apache
+    orchestrator.vm.provision "shell", inline: "mv apache2-sling-frontend.conf /etc/apache2/"
+    orchestrator.vm.provision "shell", inline: "touch /etc/apache2/mod_proxy_balancer.conf"
+    orchestrator.vm.provision "shell", inline: "if [[ $(tail -1 /etc/apache2/apache2.conf) != \"Include apache2-sling-frontend.conf\" ]]; then echo Include apache2-sling-frontend.conf >> /etc/apache2/apache2.conf; fi"
+    orchestrator.vm.provision "shell", inline: "ln -sf /etc/apache2/mods-available/headers.load /etc/apache2/mods-enabled/"
+    orchestrator.vm.provision "shell", inline: "ln -sf /etc/apache2/mods-available/proxy.load /etc/apache2/mods-enabled/"
+    orchestrator.vm.provision "shell", inline: "ln -sf /etc/apache2/mods-available/proxy_balancer.load /etc/apache2/mods-enabled/"
+    orchestrator.vm.provision "shell", inline: "ln -sf /etc/apache2/mods-available/slotmem_shm.load /etc/apache2/mods-enabled/"
+    orchestrator.vm.provision "shell", inline: "ln -sf /etc/apache2/mods-available/proxy_http.load /etc/apache2/mods-enabled/"
+    orchestrator.vm.provision "shell", inline: "ln -sf /etc/apache2/mods-available/lbmethod_byrequests.load /etc/apache2/mods-enabled/"
+
+    # Configure MongoDB (because default config "bind"s to localhost, thus rejecting all connections from other machines
+    orchestrator.vm.provision "file", source: "mongodb.conf", destination: "mongodb.conf"
+    orchestrator.vm.provision "shell", inline: "mv mongodb.conf /etc/ && service mongodb restart"
+
+    # Clean Zookeeper
+    orchestrator.vm.provision "shell", inline: "rm -rf /var/lib/zookeeper/version-2/* && service zookeeper restart"
+
+    # Launch Sling and configure
+    orchestrator.vm.provision "shell", inline: "java -Djava.security.egd=file:/dev/./urandom -Dsling.devops.proxy.configPath=/etc/apache2/mod_proxy_balancer.conf -jar org.apache.sling.launchpad-7-SNAPSHOT-standalone.jar -f sling.out & echo $! > sling.pid"
+    orchestrator.vm.provision "shell", inline: "echo 'Sleeping 30s while Sling starts up...' && sleep 30s"
+    orchestrator.vm.provision "shell", inline: "scripts/setup-orchestrator.sh localhost:8080"
+
+    # Drop oak database from MongoDB
+    orchestrator.vm.provision "shell", inline: "mongo oak --eval 'db.dropDatabase()'"
+  end
+
+  # Minion VM settings
+  CONFIGS = 2 # number of configs (C1, C2, ...)
+  INSTANCES_PER_CONFIG = 2 # number of Sling instances per config
+
+  # Configure Minion VMs
+  (0..(CONFIGS * INSTANCES_PER_CONFIG - 1)).each do |i|
+    config.vm.define "minion-C#{i / INSTANCES_PER_CONFIG + 1}-#{i % INSTANCES_PER_CONFIG + 1}" do |minion|
+
+      # Configure IP to be 10.10.10.<config><instance>, e.g. 10.10.10.21 for first minion with config C2
+      minion.vm.network "private_network", ip: "10.10.10.#{i / INSTANCES_PER_CONFIG + 1}#{i % INSTANCES_PER_CONFIG + 1}"
+
+      # Copy additional files
+      minion.vm.provision "file", source: "../resources", destination: "."
+
+      # Download bundles not downloaded during building DevOps
+      minion.vm.provision "shell", inline: "apache-maven-3.2.1/bin/mvn dependency:get -Dartifact=org.apache.sling:org.apache.sling.junit.healthcheck:1.0.6"
+      minion.vm.provision "shell", inline: "apache-maven-3.2.1/bin/mvn dependency:get -Dartifact=org.apache.sling:org.apache.sling.hc.webconsole:1.1.0"
+
+      # Launch Sling and configure
+      minion.vm.provision "shell", inline: "java -Djava.security.egd=file:/dev/./urandom -Dsling.run.modes=oak,mongo -Dsling.devops.config=C#{i / INSTANCES_PER_CONFIG + 1} -Dsling.devops.zookeeper.connString=10.10.10.10:2181 -jar org.apache.sling.launchpad-7-SNAPSHOT-standalone.jar -f sling.out & echo $! > sling.pid"
+      minion.vm.provision "shell", inline: "echo 'Sleeping 30s while Sling starts up...' && sleep 30s"
+      minion.vm.provision "shell", inline: "scripts/setup-minion-configs.sh C#{i / INSTANCES_PER_CONFIG + 1} localhost:8080"
+      minion.vm.provision "shell", inline: "scripts/setup-minion-mongo.sh 10.10.10.10:27017 localhost:8080"
+      
+      # setup-minion-repo.sh should only run on the first instance of a config
+      minion.vm.provision "shell", inline: "if [ #{i % INSTANCES_PER_CONFIG} = 0 ]; then scripts/setup-minion-repo.sh C#{i / INSTANCES_PER_CONFIG + 1} localhost:8080; fi"
+    end
+  end
+end
