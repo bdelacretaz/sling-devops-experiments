@@ -3,7 +3,7 @@
 ### Settings
 
 # Common
-source `dirname $0`/setup-common.sh
+. $(dirname $0)/setup-common.sh
 
 # Repository
 dir_apps="apps"
