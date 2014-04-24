@@ -5,7 +5,7 @@ This is the second of a series of experiments about how [Apache Sling](http://sl
 can be made more devops-friendly. 
  
 Building on the atomic configuration switching mechanism of the previous 
-[sling-devops-vol1](https://github.com/bdelacretaz/sling-devops-vol1) experiment, we add more 
+[vol1](../../tree/vol1) experiment, we add more 
 realistic Sling configurations to the Sling instances, to demonstrate atomic switching of a setup 
 that includes both scripts and OSGi services, along with a shared content repository.
 
