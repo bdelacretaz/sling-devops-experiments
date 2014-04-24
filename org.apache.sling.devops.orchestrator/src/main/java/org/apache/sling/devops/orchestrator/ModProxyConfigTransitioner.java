@@ -1,7 +1,10 @@
 package org.apache.sling.devops.orchestrator;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Scanner;
 import java.util.Set;
 
@@ -49,14 +52,31 @@ public class ModProxyConfigTransitioner implements ConfigTransitioner {
 		try (PrintWriter pw = new PrintWriter(process.getOutputStream())) {
 			pw.println(this.sudoPassword);
 		}
-		int exitValue = process.waitFor();
+
+		// Read streams so that process does not block
+		final List<String> output = readStream(process.getInputStream());
+		final List<String> errors = readStream(process.getErrorStream());
+
+		final int exitValue = process.waitFor();
+
+		// Log output
+		for (final String out : output) logger.info(out);
+
+		// Log errors: ERROR level if exit code not 0, WARN level otherwise
 		if (exitValue != 0) {
-			try (Scanner errorStream = new Scanner(process.getErrorStream())) {
-				logger.error("Proxy command \"{}\" exited with value {}, see the following output.", command, exitValue);
-				while (errorStream.hasNextLine()) logger.error(errorStream.nextLine());
-			}
+			for (final String error : errors) logger.error(error);
+			logger.error("Proxy command \"{}\" exited with value {}.", command, exitValue);
 		} else {
+			for (final String error : errors) logger.warn(error);
 			logger.info("Proxy command \"{}\" succeeded.", command);
 		}
+	}
+
+	private static List<String> readStream(InputStream stream) {
+		final List<String> lines = new LinkedList<>();
+		try (Scanner streamScanner = new Scanner(stream)) {
+			while (streamScanner.hasNextLine()) lines.add(streamScanner.nextLine());
+		}
+		return lines;
 	}
 }
