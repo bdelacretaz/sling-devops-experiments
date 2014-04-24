@@ -42,10 +42,10 @@ jars=$(parse_and_check_maven_artifacts ${bundles_common[@]} ${bundles_orchestrat
 # create paths
 echo "Creating repository paths..."
 echo "  /${dir_apps} (if doesn't exist)"
-curl -u ${login} -X MKCOL "${sling}/${dir_apps}" &> /dev/null
+curl -sSu ${login} -X MKCOL "${sling}/${dir_apps}" &> /dev/null
 echo "  /${dir_install} (deleting and recreating)"
-curl -u ${login} -X DELETE "${sling}/${dir_install}" &> /dev/null
-curl -u ${login} -X MKCOL "${sling}/${dir_install}"
+curl -sSu ${login} -X DELETE "${sling}/${dir_install}" &> /dev/null
+curl -sSu ${login} -X MKCOL "${sling}/${dir_install}"
 
 # copy jars
 echo "Copying jars to /${dir_install}..."

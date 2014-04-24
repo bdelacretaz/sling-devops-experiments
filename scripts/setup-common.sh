@@ -40,7 +40,7 @@ copy_jars() {
 	for jar in $@
 	do
 		echo "  ${jar}"
-		curl -u ${login} -T ${jar} "${url}"
+		curl -sSu ${login} -T ${jar} "${url}"
 	done
 }
 

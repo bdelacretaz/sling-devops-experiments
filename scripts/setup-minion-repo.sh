@@ -56,16 +56,16 @@ jars+=("${!config_bundle_var}")
 # create paths
 echo "Creating repository paths..."
 echo "  /${dir_cfg} (if doesn't exist)"
-curl -u ${login} -X MKCOL "${sling}/${dir_cfg}" &> /dev/null
+curl -sSu ${login} -X MKCOL "${sling}/${dir_cfg}" &> /dev/null
 path="${dir_cfg}/${config}"
 echo "  /${path} (deleting and recreating)"
-curl -u ${login} -X DELETE "${sling}/${path}" &> /dev/null
-curl -u ${login} -X MKCOL "${sling}/${path}"
+curl -sSu ${login} -X DELETE "${sling}/${path}" &> /dev/null
+curl -sSu ${login} -X MKCOL "${sling}/${path}"
 
 for dir in ${dirs[@]} "${dir_install}" # e.g. /sling-cfg/C1/apps, as well as the install dir
 do
 	echo "  /${path}/${dir}"
-	curl -u ${login} -X MKCOL "${sling}/${path}/${dir}"
+	curl -sSu ${login} -X MKCOL "${sling}/${path}/${dir}"
 done
 
 # copy jars
@@ -73,7 +73,7 @@ echo "Copying jars to /${path}/${dir_install}..."
 copy_jars "${sling}/${path}/${dir_install}/" ${jars[@]}
 
 # create test content
-curl -u ${login} -F"sling:resourceType=${testresource_type}" "${sling}/${testresource_path}" &> /dev/null
+curl -sSu ${login} -F"sling:resourceType=${testresource_type}" "${sling}/${testresource_path}" &> /dev/null
 
 # copy test script
 path+="/${dirs[0]}"
@@ -81,10 +81,10 @@ config_script_var=script_minion_${config}
 for pathpiece in $(echo ${testresource_type} | tr '/' ' ')
 do
 	path+="/${pathpiece}"
-	curl -u ${login} -X MKCOL "${sling}/${path}" &> /dev/null
+	curl -sSu ${login} -X MKCOL "${sling}/${path}" &> /dev/null
 done
 echo "Copying ${!config_script_var} to /${path}/${script_extension}.esp..."
-curl -u ${login} -X DELETE "${sling}/${path}/${script_extension}.esp" &> /dev/null
-curl -u ${login} -T ${!config_script_var} "${sling}/${path}/${script_extension}.esp"
+curl -sSu ${login} -X DELETE "${sling}/${path}/${script_extension}.esp" &> /dev/null
+curl -sSu ${login} -T ${!config_script_var} "${sling}/${path}/${script_extension}.esp"
 
 echo "Done!"

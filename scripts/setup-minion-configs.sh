@@ -60,7 +60,7 @@ do
 		echo "  ${!pidvar}"
 		
 		# stop component first
-		curl -silent -u ${login} -X POST -d "action=disable" "${sling}/${req_path_components}/${!pidvar}/${!pidvar}" > /dev/null
+		curl -sSu ${login} -X POST -d "action=disable" "${sling}/${req_path_components}/${!pidvar}/${!pidvar}" > /dev/null
 		sleep ${req_sleep}
 		
 		# build request string and make request
@@ -70,11 +70,11 @@ do
 			extravar=extra_${dir}_${component}
 			req="${req}&${!propvar}=/${dir_cfg}/${config}/${dir}${!extravar}"
 		done
-		curl -u ${login} -X POST -d "${req}" "${sling}/${req_path_configMgr}/${!pidvar}"
+		curl -sSu ${login} -X POST -d "${req}" "${sling}/${req_path_configMgr}/${!pidvar}"
 		sleep ${req_sleep}
 		
 		# start component
-		curl -silent -u ${login} -X POST -d "action=enable" "${sling}/${req_path_components}/${!pidvar}/${!pidvar}" > /dev/null
+		curl -sSu ${login} -X POST -d "action=enable" "${sling}/${req_path_components}/${!pidvar}/${!pidvar}" > /dev/null
 		sleep ${req_sleep}
 	done
 
@@ -82,7 +82,7 @@ do
 	pid_servlet_resolver="org.apache.sling.servlets.resolver.SlingServletResolver"
 	prop_servlet_resolver="servletresolver.cacheSize"
 	echo "  ${pid_servlet_resolver}"
-	curl -u ${login} -X POST -d "${req_configMgr_common}&propertylist=${prop_servlet_resolver}&${prop_servlet_resolver}=0" "${sling}/${req_path_configMgr}/${pid_servlet_resolver}"
+	curl -sSu ${login} -X POST -d "${req_configMgr_common}&propertylist=${prop_servlet_resolver}&${prop_servlet_resolver}=0" "${sling}/${req_path_configMgr}/${pid_servlet_resolver}"
 	sleep ${req_sleep}
 done
 
