@@ -120,6 +120,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.provision "file", source: "sources.list", destination: "sources.list"
   config.vm.provision "shell", inline: "mv sources.list /etc/apt/"
 
+  LAUNCHPAD_STANDALONE_PATH = "~/Documents/workspace/sling-builder/launchpad/builder/target/org.apache.sling.launchpad-7-SNAPSHOT-standalone.jar"
+
   # Copy files and bootstrap
   config.vm.provision "shell", inline: "rm -rf org.apache.sling.devops.* scripts"
   config.vm.provision "file", source: "../pom.xml", destination: "pom.xml"
@@ -127,7 +129,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.provision "file", source: "../org.apache.sling.devops.orchestrator", destination: "."
   config.vm.provision "file", source: "../org.apache.sling.devops.minion", destination: "."
   config.vm.provision "file", source: "../scripts", destination: "."
-  config.vm.provision "file", source: "~/Documents/workspace/sling-builder/launchpad/builder/target/org.apache.sling.launchpad-7-SNAPSHOT-standalone.jar", destination: "org.apache.sling.launchpad-7-SNAPSHOT-standalone.jar"
+  config.vm.provision "file", source: LAUNCHPAD_STANDALONE_PATH, destination: "org.apache.sling.launchpad-7-SNAPSHOT-standalone.jar"
   config.vm.provision "shell", path: "bootstrap.sh"
 
   # Configure Orchestrator VM
