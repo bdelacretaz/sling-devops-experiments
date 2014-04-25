@@ -27,8 +27,11 @@ public class HttpResourceMonitor {
 			ResponseHandler<String> responseHandler = new ResponseHandler<String>() {
 				@Override
 				public String handleResponse(final HttpResponse response) throws IOException {
-					EntityUtils.consume(response.getEntity());
-					return response.getStatusLine().toString();
+					return String.format(
+							"%s - %s",
+							response.getStatusLine(),
+							EntityUtils.toString(response.getEntity()).replaceAll("\n", "\\\\n")
+							);
 				}
 			};
 
