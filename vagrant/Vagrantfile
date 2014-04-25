@@ -134,8 +134,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.define "orchestrator" do |orchestrator|
     orchestrator.vm.network "private_network", ip: "10.10.10.10"
 
-    # Make apachectl not require sudo
-    orchestrator.vm.provision "file", source: "apache2-sling-frontend.conf", destination: "apache2-sling-frontend.conf"
+    # Make apachectl not require password on sudo
     orchestrator.vm.provision "file", source: "apachectl-nopasswd", destination: "apachectl-nopasswd"
     orchestrator.vm.provision "shell", inline: "chmod 0440 apachectl-nopasswd && chown root.root apachectl-nopasswd && mv apachectl-nopasswd /etc/sudoers.d/"
 
@@ -146,6 +145,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     orchestrator.vm.provision "shell", inline: "apt-get install -y apache2 zookeeperd mongodb"
 
     # Configure Apache
+    orchestrator.vm.provision "file", source: "apache2-sling-frontend.conf", destination: "apache2-sling-frontend.conf"
     orchestrator.vm.provision "shell", inline: "mv apache2-sling-frontend.conf /etc/apache2/"
     orchestrator.vm.provision "shell", inline: "touch /etc/apache2/mod_proxy_balancer.conf"
     orchestrator.vm.provision "shell", inline: "if [[ $(tail -1 /etc/apache2/apache2.conf) != \"Include apache2-sling-frontend.conf\" ]]; then echo Include apache2-sling-frontend.conf >> /etc/apache2/apache2.conf; fi"
