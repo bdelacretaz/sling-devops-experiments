@@ -8,9 +8,9 @@ pid_document_nodestore_service="org.apache.jackrabbit.oak.plugins.document.Docum
 
 show_usage_and_exit() {
 	echo "Usage:"
-	echo "$0 config host:port"
+	echo "$0 mongohost:port slinghost:port"
 	echo "Example:"
-	echo "$0 C1 localhost:8080"
+	echo "$0 localhost:27017 localhost:8080"
 	exit 1
 }
 
