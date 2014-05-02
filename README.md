@@ -125,3 +125,18 @@ bin/zkCli.sh -server 10.10.10.10:2181
 
 * If `ls /sling` lists only one instance, this means the second instance did not initialize properly. Re-provision it.
 * If `ls /sling` does not list any instances, this means that the first instance did not initialize properly. Re-provision it. If this does not help, re-provision the whole setup (sometimes the oak database becomes corrupt and Minions start throwing `root node does not exist at revision xyz` exceptions).
+
+Testing
+-------
+
+To verify that the switch between the Sling configs is atomic (from the client point of view), the HttpResourceMonitor tool from the `org.apache.sling.devops.tools` module can be used. This tool sends an HTTP request over and over in a single thread and logs changes in responses.
+
+Usage:
+```
+HttpResourceMonitor [host [resource]]
+```
+
+To monitor the output of our test script while running the prototype with Vagrant:
+```
+HttpResourceMonitor 10.10.10.10 /mynode.test
+```
