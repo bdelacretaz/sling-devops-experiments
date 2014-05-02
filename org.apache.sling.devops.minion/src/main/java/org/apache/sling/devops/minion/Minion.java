@@ -10,8 +10,6 @@ import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
 import org.apache.felix.scr.annotations.Reference;
-import org.apache.felix.scr.annotations.Service;
-import org.apache.sling.commons.osgi.PropertiesUtil;
 import org.apache.sling.devops.Instance;
 import org.apache.sling.devops.minion.test.SearchPathTest;
 import org.apache.sling.discovery.DiscoveryService;
@@ -19,8 +17,6 @@ import org.apache.sling.discovery.InstanceDescription;
 import org.apache.sling.hc.api.HealthCheck;
 import org.apache.sling.hc.api.execution.HealthCheckExecutor;
 import org.apache.sling.installer.provider.jcr.impl.JcrInstaller;
-import org.apache.sling.launchpad.api.StartupListener;
-import org.apache.sling.launchpad.api.StartupMode;
 import org.apache.sling.resourceresolver.impl.ResourceResolverFactoryActivator;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.InvalidSyntaxException;
@@ -30,8 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Component(immediate=true)
-@Service
-public class Minion implements StartupListener {
+public class Minion {
 
 	private static final Logger logger = LoggerFactory.getLogger(Minion.class);
 
@@ -112,6 +107,7 @@ public class Minion implements StartupListener {
 			@Override
 			public void onFail() {}
 		});
+		this.healthCheckMonitor.start();
 
 		logger.info("Activated with config {}.", this.config);
 	}
@@ -120,20 +116,5 @@ public class Minion implements StartupListener {
 	public void onDeactivate() throws Exception {
 		this.instanceAnnouncer.close();
 		this.healthCheckMonitor.close();
-	}
-
-	@Override
-	public void inform(StartupMode mode, boolean finished) {
-		if (finished) this.startupFinished(mode);
-	}
-
-	@Override
-	public void startupFinished(StartupMode mode) {
-		logger.info("Startup finished, running health checks.");
-		this.healthCheckMonitor.start();
-	}
-
-	@Override
-	public void startupProgress(float ratio) {
 	}
 }
