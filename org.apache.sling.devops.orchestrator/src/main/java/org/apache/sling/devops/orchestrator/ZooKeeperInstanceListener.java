@@ -23,12 +23,14 @@ public abstract class ZooKeeperInstanceListener implements InstanceListener {
 
 	private static final Logger logger = LoggerFactory.getLogger(ZooKeeperInstanceListener.class);
 
+	public static final String ZK_CONNECTION_STRING_PROP = ZooKeeperConnector.ZK_CONNECTION_STRING_PROP;
+
 	private ZooKeeperConnector zkConnector;
 	private final Map<String, Instance> currentInstances = new HashMap<>();
 	private int currentVersion = -1;
 
-	public ZooKeeperInstanceListener() throws IOException {
-		this.zkConnector = new ZooKeeperConnector(new Watcher() {
+	public ZooKeeperInstanceListener(String connectionString) throws IOException {
+		this.zkConnector = new ZooKeeperConnector(connectionString, new Watcher() {
 			@Override
 			public void process(WatchedEvent event) {
 				if (event.getType() == Event.EventType.NodeChildrenChanged) {

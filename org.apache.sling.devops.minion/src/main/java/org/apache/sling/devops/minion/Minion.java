@@ -11,6 +11,7 @@ import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.Service;
+import org.apache.sling.commons.osgi.PropertiesUtil;
 import org.apache.sling.devops.Instance;
 import org.apache.sling.devops.minion.test.SearchPathTest;
 import org.apache.sling.discovery.DiscoveryService;
@@ -21,6 +22,7 @@ import org.apache.sling.installer.provider.jcr.impl.JcrInstaller;
 import org.apache.sling.launchpad.api.StartupListener;
 import org.apache.sling.launchpad.api.StartupMode;
 import org.apache.sling.resourceresolver.impl.ResourceResolverFactoryActivator;
+import org.osgi.framework.BundleContext;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.service.cm.Configuration;
 import org.osgi.service.cm.ConfigurationAdmin;
@@ -33,7 +35,7 @@ public class Minion implements StartupListener {
 
 	private static final Logger logger = LoggerFactory.getLogger(Minion.class);
 
-	public static final String CONFIG = System.getProperty("sling.devops.config"); // TODO
+	public static final String CONFIG_PROP = "sling.devops.config";
 	public static final String CONFIG_PATH = "/sling-cfg";
 
 	public static final String PID_JUNIT_HEALTH_CHECK = "org.apache.sling.junit.healthcheck.impl.JUnitHealthCheck";
@@ -55,12 +57,15 @@ public class Minion implements StartupListener {
 	@Reference
 	private DiscoveryService discoveryService;
 
+	private String config;
 	private InstanceAnnouncer instanceAnnouncer;
 	private HealthCheckMonitor healthCheckMonitor;
 
 	@Activate
-	public void onActivate() throws IOException, InvalidSyntaxException {
-		this.instanceAnnouncer = new ZooKeeperInstanceAnnouncer();
+	public void onActivate(BundleContext bundleContext) throws IOException, InvalidSyntaxException {
+		this.config = (String)bundleContext.getProperty(CONFIG_PROP);
+		this.instanceAnnouncer = new ZooKeeperInstanceAnnouncer(
+				(String)bundleContext.getProperty(ZooKeeperInstanceAnnouncer.ZK_CONNECTION_STRING_PROP));
 
 		// Check health check config
 		final Configuration[] hcConfigs = this.configurationAdmin.listConfigurations(String.format(
@@ -100,13 +105,15 @@ public class Minion implements StartupListener {
 				final InstanceDescription instanceDescription = Minion.this.discoveryService.getTopology().getLocalInstance();
 				Minion.this.instanceAnnouncer.announce(new Instance(
 						instanceDescription.getSlingId(),
-						CONFIG,
+						Minion.this.config,
 						new HashSet<>(Arrays.asList(instanceDescription.getProperty(InstanceDescription.PROPERTY_ENDPOINTS).split(",")))
 						));
 			}
 			@Override
 			public void onFail() {}
 		});
+
+		logger.info("Activated with config {}.", this.config);
 	}
 
 	@Deactivate

@@ -5,7 +5,9 @@ import java.io.IOException;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
+import org.apache.sling.commons.osgi.PropertiesUtil;
 import org.apache.sling.devops.Instance;
+import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,18 +16,14 @@ public class Orchestrator {
 
 	private static final Logger logger = LoggerFactory.getLogger(Orchestrator.class);
 
-	public static final String PROXY_EXECUTABLE;
-	public static final String PROXY_CONFIG_PATH;
-	public static final String SUDO_PASSWORD = System.getProperty("sudo.password");
-	public static final int N;
-	static { // TODO
-		String proxyExecutable = System.getProperty("sling.devops.proxy.executable");
-		PROXY_EXECUTABLE = proxyExecutable == null ? "apachectl" : proxyExecutable;
-		String proxyConfigPath = System.getProperty("sling.devops.proxy.configPath");
-		PROXY_CONFIG_PATH = proxyConfigPath == null ? "/private/etc/apache2/mod_proxy_balancer.conf" : proxyConfigPath;
-		String n = System.getProperty("sling.devops.orchestrator.n");
-		N = n == null ? 2 : Integer.parseInt(n);
-	}
+	public static final String PROXY_EXECUTABLE_PROP = "sling.devops.proxy.executable";
+	public static final String PROXY_EXECUTABLE_DEFAULT = "apachectl";
+	public static final String PROXY_CONFIG_PATH_PROP = "sling.devops.proxy.configPath";
+	public static final String PROXY_CONFIG_PATH_DEFAULT = "/private/etc/apache2/mod_proxy_balancer.conf";
+	public static final String SUDO_PASSWORD_PROP = "sudo.password";
+	public static final String N_PROP = "sling.devops.orchestrator.n";
+	public static final int N_DEFAULT = 2;
+	private int n;
 
 	private InstanceListener instanceListener;
 	private InstanceManager instanceManager;
@@ -33,10 +31,16 @@ public class Orchestrator {
 	private String currentConfig = "";
 
 	@Activate
-	public void onActivate() throws IOException, InterruptedException {
+	public void onActivate(BundleContext bundleContext) throws IOException, InterruptedException {
+		this.n = PropertiesUtil.toInteger(bundleContext.getProperty(N_PROP), N_DEFAULT);
 		this.instanceManager = new InstanceManager();
-		this.configTransitioner = new ModProxyConfigTransitioner(PROXY_EXECUTABLE, PROXY_CONFIG_PATH, SUDO_PASSWORD);
-		this.instanceListener = new ZooKeeperInstanceListener() {
+		this.configTransitioner = new ModProxyConfigTransitioner(
+				PropertiesUtil.toString(bundleContext.getProperty(PROXY_EXECUTABLE_PROP), PROXY_EXECUTABLE_DEFAULT),
+				PropertiesUtil.toString(bundleContext.getProperty(PROXY_CONFIG_PATH_PROP), PROXY_CONFIG_PATH_DEFAULT),
+				(String)bundleContext.getProperty(SUDO_PASSWORD_PROP)
+				);
+		this.instanceListener = new ZooKeeperInstanceListener(
+				(String)bundleContext.getProperty(ZooKeeperInstanceListener.ZK_CONNECTION_STRING_PROP)) {
 
 			@Override
 			public void onInstanceAdded(Instance instance) {
@@ -77,6 +81,6 @@ public class Orchestrator {
 
 	private boolean isConfigSatisfied(String newConfig) {
 		return newConfig.compareTo(this.currentConfig) >= 0 &&
-				this.instanceManager.getEndpoints(newConfig).size() >= N;
+				this.instanceManager.getEndpoints(newConfig).size() >= this.n;
 	}
 }

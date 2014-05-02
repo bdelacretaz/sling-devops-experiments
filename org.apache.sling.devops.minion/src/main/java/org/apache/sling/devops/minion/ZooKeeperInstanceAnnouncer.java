@@ -19,10 +19,12 @@ public class ZooKeeperInstanceAnnouncer implements InstanceAnnouncer {
 
 	private static final Logger logger = LoggerFactory.getLogger(ZooKeeperInstanceAnnouncer.class);
 
+	public static final String ZK_CONNECTION_STRING_PROP = ZooKeeperConnector.ZK_CONNECTION_STRING_PROP;
+
 	private ZooKeeperConnector zkConnector;
 
-	public ZooKeeperInstanceAnnouncer() throws IOException {
-		this.zkConnector = new ZooKeeperConnector(new Watcher() {
+	public ZooKeeperInstanceAnnouncer(String connectionString) throws IOException {
+		this.zkConnector = new ZooKeeperConnector(connectionString, new Watcher() {
 			@Override
 			public void process(WatchedEvent event) {
 				if (event.getType() != Event.EventType.None) {
