@@ -1,2 +1,3 @@
-[script]: Zwei
+[content]: <%= currentNode.text %>
+[script] : Zwei
 [service]: <%= sling.getService(Packages.org.apache.sling.samples.test.MyService).getString() %>
