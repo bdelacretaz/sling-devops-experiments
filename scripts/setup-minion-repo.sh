@@ -22,6 +22,7 @@ script_minion_C2="$(dirname $0)/../resources/test2.esp"
 script_extension="test"
 testresource_type="foo/bar"
 testresource_path="content/mynode"
+testresource_text="The quick brown fox jumps over the lazy dog"
 
 ### Functions
 
@@ -73,7 +74,7 @@ echo "Copying jars to /${path}/${dir_install}..."
 copy_jars "${sling}/${path}/${dir_install}/" ${jars[@]}
 
 # create test content
-curl -sSu ${login} -F"sling:resourceType=${testresource_type}" "${sling}/${testresource_path}" &> /dev/null
+curl -sSu ${login} -F"sling:resourceType=${testresource_type}" -F"text=${testresource_text}" "${sling}/${testresource_path}" &> /dev/null
 
 # copy test script
 path+="/${dirs[0]}"
