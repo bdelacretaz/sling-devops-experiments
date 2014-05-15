@@ -33,14 +33,6 @@ start.framework
 bundle mvn:org.apache.felix/org.apache.felix.configadmin/1.6.0
 start.all.bundles
 
-# Once Configuration Admin is loaded, we can set configurations
-#config org.apache.sling.installer.provider.jcr.impl.JcrInstaller sling.jcrinstall.search.path /sling-cfg/C1/apps:200,/sling-cfg/C1/libs:100
-#config org.apache.sling.jcr.resource.internal.JcrResourceResolverFactoryImpl resource.resolver.searchpath /sling-cfg/C1/apps,/sling-cfg/C1/libs
-#config org.apache.jackrabbit.oak.plugins.document.DocumentNodeStoreService mongouri mongodb://localhost:27017
-#config org.apache.jackrabbit.oak.plugins.document.DocumentNodeStoreService db oakblahblah
-#config org.apache.sling.servlets.resolver.SlingServletResolver servletresolver.cacheSize 0
-#config integrationTestsConfig message This test config should be loaded at startup
-
 # Install bundles
 # mvn: protocol can be used.
 bundle mvn:org.apache.felix/org.apache.felix.http.jetty/2.2.2
