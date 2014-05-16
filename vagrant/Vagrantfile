@@ -120,16 +120,19 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.provision "file", source: "sources.list", destination: "sources.list"
   config.vm.provision "shell", inline: "mv sources.list /etc/apt/"
 
-  LAUNCHPAD_STANDALONE_PATH = "~/Documents/workspace/sling-builder/launchpad/builder/target/org.apache.sling.launchpad-7-SNAPSHOT-standalone.jar"
+  CRANKSTART_LAUNCHER_PATH = "~/Desktop/crankstart/launcher/target/org.apache.sling.crankstart.launcher-0.0.1-SNAPSHOT.jar"
+  MAVEN_REPO_PATH = "~/.m2/repository"
+
+  config.vm.synced_folder MAVEN_REPO_PATH, "/root/.m2/repository"
 
   # Copy files and bootstrap
-  config.vm.provision "shell", inline: "rm -rf org.apache.sling.devops.* scripts"
-  config.vm.provision "file", source: "../pom.xml", destination: "pom.xml"
-  config.vm.provision "file", source: "../org.apache.sling.devops.common", destination: "."
-  config.vm.provision "file", source: "../org.apache.sling.devops.orchestrator", destination: "."
-  config.vm.provision "file", source: "../org.apache.sling.devops.minion", destination: "."
+  #config.vm.provision "shell", inline: "rm -rf org.apache.sling.devops.* scripts"
+  #config.vm.provision "file", source: "../pom.xml", destination: "pom.xml"
+  #config.vm.provision "file", source: "../org.apache.sling.devops.common", destination: "."
+  #config.vm.provision "file", source: "../org.apache.sling.devops.orchestrator", destination: "."
+  #config.vm.provision "file", source: "../org.apache.sling.devops.minion", destination: "."
   config.vm.provision "file", source: "../scripts", destination: "."
-  config.vm.provision "file", source: LAUNCHPAD_STANDALONE_PATH, destination: "org.apache.sling.launchpad-7-SNAPSHOT-standalone.jar"
+  config.vm.provision "file", source: CRANKSTART_LAUNCHER_PATH, destination: "crankstart-launcher.jar"
   config.vm.provision "shell", path: "bootstrap.sh"
 
   # Configure Orchestrator VM
@@ -165,13 +168,15 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     # Clean Zookeeper
     orchestrator.vm.provision "shell", inline: "rm -rf /var/lib/zookeeper/version-2/* && service zookeeper restart"
 
-    # Launch Sling and configure
-    orchestrator.vm.provision "shell", inline: "java -Djava.security.egd=file:/dev/./urandom -Dsling.devops.proxy.configPath=/etc/apache2/mod_proxy_balancer.conf -jar org.apache.sling.launchpad-7-SNAPSHOT-standalone.jar -f sling.out & echo $! > sling.pid"
-    orchestrator.vm.provision "shell", inline: "echo 'Sleeping 30s while Sling starts up...' && sleep 30s"
-    orchestrator.vm.provision "shell", inline: "scripts/setup-orchestrator.sh localhost:8080"
-
     # Drop oak database from MongoDB
     orchestrator.vm.provision "shell", inline: "mongo oak --eval 'db.dropDatabase()'"
+
+    # Launch Sling and configure
+    orchestrator.vm.provision "file", source: "../crankstart/sling-orch.crank.txt", destination: "sling-orch.crank.txt"
+    orchestrator.vm.provision "shell", inline: "rm -rf sling-orch-crankstart/ crankstart-launcher.out"
+    orchestrator.vm.provision "shell", inline: "java -Djava.security.egd=file:/dev/./urandom -Dport=8080 -Dproxy_executable=apachectl -Dsling.devops.proxy.configPath=/etc/apache2/mod_proxy_balancer.conf -jar crankstart-launcher.jar sling-orch.crank.txt &> crankstart-launcher.out & echo $! > crankstart-launcher.pid"
+    orchestrator.vm.provision "shell", inline: "tail -n1000 -f crankstart-launcher.out & pid=$! && sleep 30s && kill $pid"
+    #orchestrator.vm.provision "shell", inline: "scripts/setup-orchestrator.sh localhost:8080"
   end
 
   # Minion VM settings
@@ -180,26 +185,31 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   # Configure Minion VMs
   (0..(CONFIGS * INSTANCES_PER_CONFIG - 1)).each do |i|
-    config.vm.define "minion-C#{i / INSTANCES_PER_CONFIG + 1}-#{i % INSTANCES_PER_CONFIG + 1}" do |minion|
+    _config_num = "#{i / INSTANCES_PER_CONFIG + 1}"
+    _config = "C#{_config_num}"
+    _instance = "#{i % INSTANCES_PER_CONFIG + 1}"
+    config.vm.define "minion-#{_config}-#{_instance}" do |minion|
 
       # Configure IP to be 10.10.10.<config><instance>, e.g. 10.10.10.21 for first minion with config C2
-      minion.vm.network "private_network", ip: "10.10.10.#{i / INSTANCES_PER_CONFIG + 1}#{i % INSTANCES_PER_CONFIG + 1}"
+      minion.vm.network "private_network", ip: "10.10.10.#{_config_num}#{_instance}"
 
       # Copy additional files
       minion.vm.provision "file", source: "../resources", destination: "."
 
       # Download bundles not downloaded during building DevOps
-      minion.vm.provision "shell", inline: "apache-maven-3.2.1/bin/mvn dependency:get -Dartifact=org.apache.sling:org.apache.sling.junit.healthcheck:1.0.6"
-      minion.vm.provision "shell", inline: "apache-maven-3.2.1/bin/mvn dependency:get -Dartifact=org.apache.sling:org.apache.sling.hc.webconsole:1.1.0"
+      #minion.vm.provision "shell", inline: "apache-maven-3.2.1/bin/mvn dependency:get -Dartifact=org.apache.sling:org.apache.sling.junit.healthcheck:1.0.6"
+      #minion.vm.provision "shell", inline: "apache-maven-3.2.1/bin/mvn dependency:get -Dartifact=org.apache.sling:org.apache.sling.hc.webconsole:1.1.0"
 
       # Launch Sling and configure
-      minion.vm.provision "shell", inline: "java -Djava.security.egd=file:/dev/./urandom -Dsling.run.modes=oak,mongo -Dsling.devops.config=C#{i / INSTANCES_PER_CONFIG + 1} -Dsling.devops.zookeeper.connString=10.10.10.10:2181 -jar org.apache.sling.launchpad-7-SNAPSHOT-standalone.jar -f sling.out & echo $! > sling.pid"
-      minion.vm.provision "shell", inline: "echo 'Sleeping 30s while Sling starts up...' && sleep 30s"
-      minion.vm.provision "shell", inline: "scripts/setup-minion-configs.sh C#{i / INSTANCES_PER_CONFIG + 1} localhost:8080"
-      minion.vm.provision "shell", inline: "scripts/setup-minion-mongo.sh 10.10.10.10:27017 localhost:8080"
+      minion.vm.provision "file", source: "../crankstart/sling-#{_config}-#{_instance}.crank.txt", destination: "sling-#{_config}-#{_instance}.crank.txt"
+      minion.vm.provision "shell", inline: "rm -rf sling-#{_config}-#{_instance}-crankstart/ crankstart-launcher.out"
+      minion.vm.provision "shell", inline: "java -Djava.security.egd=file:/dev/./urandom -Dport=8080 -Dmongo_uri=mongodb://10.10.10.10:27017 -Dmongo_db=oak -Dsling.devops.zookeeper.connString=10.10.10.10:2181 -jar crankstart-launcher.jar sling-#{_config}-#{_instance}.crank.txt &> crankstart-launcher.out & echo $! > crankstart-launcher.pid"
+      minion.vm.provision "shell", inline: "tail -n1000 -f crankstart-launcher.out & pid=$! && sleep 30s && kill $pid"
+      #minion.vm.provision "shell", inline: "scripts/setup-minion-configs.sh C#{i / INSTANCES_PER_CONFIG + 1} localhost:8080"
+      #minion.vm.provision "shell", inline: "scripts/setup-minion-mongo.sh 10.10.10.10:27017 localhost:8080"
       
       # setup-minion-repo.sh should only run on the first instance of a config
-      minion.vm.provision "shell", inline: "if [ #{i % INSTANCES_PER_CONFIG} = 0 ]; then scripts/setup-minion-repo.sh C#{i / INSTANCES_PER_CONFIG + 1} localhost:8080; fi"
+      minion.vm.provision "shell", inline: "if [ #{_instance} = 1 ]; then scripts/setup-minion-repo.sh #{_config} localhost:8080; fi"
     end
   end
 end
