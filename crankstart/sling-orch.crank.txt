@@ -2,6 +2,10 @@
 # TODO: not all integration tests pass, we might be missing some
 # bundles or properties that the Sling launchpad provides
 
+# Set default values for our variables
+defaults port 1240
+defaults proxy_executable /opt/httpd-2.4.7/bin/apachectl
+
 # Set bootstrap classpath, mvn: protocol can be used
 classpath mvn:org.apache.felix/org.apache.felix.framework/4.4.0
 classpath mvn:org.osgi/org.osgi.compendium/4.2.0
@@ -15,7 +19,7 @@ classpath mvn:org.apache.sling/org.apache.sling.crankstart.core/0.0.1-SNAPSHOT
 classpath mvn:org.apache.sling/org.apache.sling.crankstart.api/0.0.1-SNAPSHOT
 
 # Set OSGi framework properties
-osgi.property org.osgi.service.http.port 1240
+osgi.property org.osgi.service.http.port ${port}
 osgi.property sling.home sling-orch-crankstart
 osgi.property org.osgi.framework.storage sling-orch-crankstart/osgi.framework.storage
 osgi.property org.apache.sling.commons.log.level INFO
@@ -24,7 +28,7 @@ osgi.property org.apache.sling.commons.log.file.number 5
 osgi.property org.apache.sling.commons.log.file.size '.'yyyy-MM-dd
 osgi.property felix.startlevel.bundle 22
 osgi.property org.osgi.framework.startlevel.beginning 32
-osgi.property sling.devops.proxy.executable /opt/httpd-2.4.7/bin/apachectl
+osgi.property sling.devops.proxy.executable ${proxy_executable}
 
 # Once OSGi properties are set, start the framework
 start.framework
@@ -172,4 +176,4 @@ bundle mvn:org.apache.sling/org.apache.sling.devops.orchestrator/0.0.1-SNAPSHOT
 # Now start bundles
 start.all.bundles
 
-log Sling will be available at http://localhost:1240/system/console
+log Sling will be available at http://localhost:${port}/system/console
