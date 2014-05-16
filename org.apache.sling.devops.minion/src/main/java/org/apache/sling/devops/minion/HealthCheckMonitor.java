@@ -51,7 +51,7 @@ public class HealthCheckMonitor implements Closeable {
 
 	private synchronized void process(final List<HealthCheckExecutionResult> results) {
 		if (!this.isOk) {
-			boolean allOk = true;
+			boolean allOk = results.size() > 0;
 			for (final HealthCheckExecutionResult result : results) {
 				if (!result.getHealthCheckResult().isOk()) {
 					allOk = false;
