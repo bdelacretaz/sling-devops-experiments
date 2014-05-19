@@ -5,15 +5,6 @@
 # Common
 . $(dirname $0)/setup-common.sh
 
-# Bundles (as maven dependencies)
-bundles_minion=(
-	"org.apache.sling:org.apache.sling.hc.core:1.1.0"
-	"org.apache.sling:org.apache.sling.junit.core:1.0.8"
-	"org.apache.sling:org.apache.sling.junit.healthcheck:1.0.6"
-	"org.apache.sling:org.apache.sling.hc.webconsole:1.1.0" # useful
-	"org.apache.sling:org.apache.sling.devops.minion:0.0.1-SNAPSHOT"
-	)
-
 # Resources
 bundle_minion_C1="$(dirname $0)/../resources/org.apache.sling.samples.test-0.0.1.jar"
 bundle_minion_C2="$(dirname $0)/../resources/org.apache.sling.samples.test-0.0.2.jar"
@@ -46,13 +37,9 @@ sling=http://$2
 
 echo "-- Setting up repository for config ${config} via Sling instance at ${sling} --"
 
-# check if artifacts exist
-echo "Checking existence of artifacts..."
-jars=$(parse_and_check_maven_artifacts ${bundles_common[@]} ${bundles_minion[@]})
-
 # add config-determined bundle
 config_bundle_var=bundle_minion_${config}
-jars+=("${!config_bundle_var}")
+jars=("${!config_bundle_var}")
 
 # create paths
 echo "Creating repository paths..."
