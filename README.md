@@ -40,8 +40,9 @@ Before running this prototype, it is necessary to prepare your local Maven repos
   3. `mvn clean install` the following paths:
     1. `contrib/crankstart`
     2. `bundles/jcr/oak-server`
-    3. `bundles/extensions/groovy`
-    4. `contrib/launchpad/karaf`
+    3. `bundles/extensions/fsresource`
+    4. `bundles/extensions/groovy`
+    5. `contrib/launchpad/karaf`
 
 ### Vagrant
 
