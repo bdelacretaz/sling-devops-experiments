@@ -4,6 +4,8 @@
 
 # Set default values for our variables
 defaults port 1240
+defaults git_repo /Users/stetsenk/Documents/workspace/Test/blah
+defaults git_file mysling.crank.txt
 defaults proxy_executable /opt/httpd-2.4.7/bin/apachectl
 
 # Set bootstrap classpath, mvn: protocol can be used
@@ -28,6 +30,8 @@ osgi.property org.apache.sling.commons.log.file.number 5
 osgi.property org.apache.sling.commons.log.file.size '.'yyyy-MM-dd
 osgi.property felix.startlevel.bundle 22
 osgi.property org.osgi.framework.startlevel.beginning 32
+osgi.property sling.devops.git.repo ${git_repo}
+osgi.property sling.devops.git.file ${git_file}
 osgi.property sling.devops.proxy.executable ${proxy_executable}
 
 # Once OSGi properties are set, start the framework
