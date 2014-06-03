@@ -47,57 +47,26 @@ public class Orchestrator {
 	private InstanceManager instanceManager;
 	private GitFileMonitor gitFileMonitor;
 	private ConfigTransitioner configTransitioner;
-	private String currentConfig = "";
+	private String runningConfig = "";
+	private String targetConfig = "";
 
 	@Activate
 	public void onActivate(BundleContext bundleContext) throws GitAPIException, IOException, InterruptedException {
 		this.n = PropertiesUtil.toInteger(bundleContext.getProperty(N_PROP), N_DEFAULT);
 		this.instanceManager = new InstanceManager();
 
+		// Create devops directory
 		this.devopsDirectory = new File(this.slingSettingsService.getAbsolutePathWithinSlingHome(DEVOPS_DIR));
 		if (!this.devopsDirectory.exists()) this.devopsDirectory.mkdir();
 
-		// Setup Git monitor
-		final String gitRepoPath = PropertiesUtil.toString(bundleContext.getProperty(GIT_REPO_PATH_PROP), null);
-		final String gitRepoFilePath = PropertiesUtil.toString(bundleContext.getProperty(GIT_REPO_FILE_PATH_PROP), null);
-		if (gitRepoPath.contains("://")) { // assume remote
-			this.gitFileMonitor = new RemoteGitFileMonitor(
-					gitRepoPath,
-					this.slingSettingsService.getAbsolutePathWithinSlingHome(GIT_WORKING_COPY_DIR),
-					gitRepoFilePath
-					);
-		} else {
-			this.gitFileMonitor = new LocalGitFileMonitor(gitRepoPath, gitRepoFilePath);
-		}
-		this.gitFileMonitor.addListener(new GitFileMonitor.GitFileListener() {
-			@Override
-			public void onModified(long time, ByteBuffer content) {
-				final String config = "C" + time;
-				if (!Orchestrator.this.tryTransition(config)) {
-					final File configFile = new File(Orchestrator.this.devopsDirectory, config + ".crank.txt");
-					try (final FileChannel fileChannel = new FileOutputStream(configFile, false).getChannel()) {
-						fileChannel.write(content);
-						logger.info(
-								"CRANKSTART {} MORE INSTANCES FROM {} WITH config={}.",
-								Orchestrator.this.n - Orchestrator.this.instanceManager.getEndpoints(config).size(),
-								configFile.getAbsolutePath(),
-								config
-								);
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						logger.error("Could not write crank.txt file.", e);
-					}
-				}
-			}
-		});
-		this.gitFileMonitor.start();
-
+		// Setup config transitioner
 		this.configTransitioner = new ModProxyConfigTransitioner(
 				PropertiesUtil.toString(bundleContext.getProperty(PROXY_EXECUTABLE_PROP), PROXY_EXECUTABLE_DEFAULT),
 				PropertiesUtil.toString(bundleContext.getProperty(PROXY_CONFIG_PATH_PROP), PROXY_CONFIG_PATH_DEFAULT),
 				(String)bundleContext.getProperty(SUDO_PASSWORD_PROP)
 				);
 
+		// Setup instance listener
 		this.instanceListener = new ZooKeeperInstanceListener(
 				(String)bundleContext.getProperty(ZooKeeperInstanceListener.ZK_CONNECTION_STRING_PROP)) {
 
@@ -118,6 +87,43 @@ public class Orchestrator {
 				Orchestrator.this.instanceManager.removeInstance(slingId);
 			}
 		};
+
+		// Setup Git monitor
+		final String gitRepoPath = PropertiesUtil.toString(bundleContext.getProperty(GIT_REPO_PATH_PROP), null);
+		final String gitRepoFilePath = PropertiesUtil.toString(bundleContext.getProperty(GIT_REPO_FILE_PATH_PROP), null);
+		if (gitRepoPath.contains("://")) { // assume remote
+			this.gitFileMonitor = new RemoteGitFileMonitor(
+					gitRepoPath,
+					this.slingSettingsService.getAbsolutePathWithinSlingHome(GIT_WORKING_COPY_DIR),
+					gitRepoFilePath
+					);
+		} else {
+			this.gitFileMonitor = new LocalGitFileMonitor(gitRepoPath, gitRepoFilePath);
+		}
+		this.gitFileMonitor.addListener(new GitFileMonitor.GitFileListener() {
+			@Override
+			public synchronized void onModified(long time, ByteBuffer content) {
+				final String config = "C" + time;
+				if (!Orchestrator.this.isConfigOutdated(config)) {
+					Orchestrator.this.targetConfig = config;
+					if (!Orchestrator.this.tryTransition(config)) {
+						final File configFile = new File(Orchestrator.this.devopsDirectory, config + ".crank.txt");
+						try (final FileChannel fileChannel = new FileOutputStream(configFile, false).getChannel()) {
+							fileChannel.write(content);
+							Orchestrator.this.startMinions(
+									config,
+									configFile.getAbsolutePath(),
+									Orchestrator.this.n - Orchestrator.this.instanceManager.getEndpoints(config).size()
+									);
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							logger.error("Could not write crank.txt file.", e);
+						}
+					}
+				}
+			}
+		});
+		this.gitFileMonitor.start();
 	}
 
 	@Deactivate
@@ -126,8 +132,53 @@ public class Orchestrator {
 		this.instanceListener.close();
 	}
 
-	private boolean tryTransition(String newConfig) {
-		if (!this.isConfigNewer(newConfig)) return true;
+	/**
+	 * Crankstarts new minions.
+	 *
+	 * @param config config value to set on the minions
+	 * @param crankFilePath path to the crank.txt file to crankstart the minions from
+	 * @param num number of minions to crankstart
+	 */
+	private synchronized void startMinions(final String config, final String crankFilePath, final int num) {
+		// TODO
+		logger.info(
+				"CRANKSTART {} MINIONS WITH config={} FROM {}.",
+				num,
+				config,
+				crankFilePath
+				);
+	}
+
+	/**
+	 * Stops minions running a specific config.
+	 *
+	 * @param config config to stop
+	 */
+	private synchronized void stopMinions(final String config) {
+		if (!this.instanceManager.getEndpoints(config).isEmpty()) {
+			// TODO
+			logger.info(
+					"STOP MINIONS WITH config={}: {}",
+					config,
+					this.instanceManager.getEndpoints(config)
+					);
+		}
+	}
+
+	/**
+	 * Tries to transition to the specified config and returns whether the
+	 * transition succeeded.
+	 *
+	 * A transition is considered successful if (i) the specified config
+	 * is outdated, or (ii) the specified config is current (not outdated)
+	 * and is satisfied. In the latter case, the minions running the config
+	 * prior to the transition are afterwards stopped.
+	 *
+	 * @param newConfig config to try to transition to
+	 * @return true if the transition occurred or the config is outdated, false otherwise
+	 */
+	private synchronized boolean tryTransition(String newConfig) {
+		if (this.isConfigOutdated(newConfig)) return true;
 		else if (this.isConfigSatisfied(newConfig)) {
 			logger.info("Config {} satisfied, transitioning.", newConfig);
 			try {
@@ -135,7 +186,8 @@ public class Orchestrator {
 						newConfig,
 						this.instanceManager.getEndpoints(newConfig)
 						);
-				this.currentConfig = newConfig;
+				this.stopMinions(this.runningConfig);
+				this.runningConfig = newConfig;
 				return true;
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
@@ -145,11 +197,12 @@ public class Orchestrator {
 		return false;
 	}
 
-	private boolean isConfigNewer(String newConfig) {
-		return newConfig.compareTo(this.currentConfig) > 0;
+	private boolean isConfigOutdated(String newConfig) {
+		return newConfig.compareTo(this.targetConfig) < 0;
 	}
 
 	private boolean isConfigSatisfied(String newConfig) {
-		return this.instanceManager.getEndpoints(newConfig).size() >= this.n;
+		return newConfig.equals(this.targetConfig)
+				&& this.instanceManager.getEndpoints(newConfig).size() >= this.n;
 	}
 }
