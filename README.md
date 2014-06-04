@@ -7,12 +7,12 @@ Continuing from the Crankstart-based instance starting mechanism demonstrated in
 
 The tentative test scenario is as follows:
 
-# Start the demo with the Git repository URL of the crank file.
-# The Orchestrator watches that file in Git for new versions.
-# Once a new version `V` is found (or the initial version, when starting), the Orchestrator starts\* N Sling instances with that version.
-# The crankstart file has a few variables: Sling HTTP port number, MongoDB URL, ZooKeeper URL, etc.
-# The Sling instances announce themselves to the Orchestrator when ready.
-# Orchestrator has a target version `V` that it wants to expose via the HTTP front-end. Once N Sling instances have announced themselves with that target version, the Orchestrator activates them atomically on the front-end.
-# When old Sling instances are not needed anymore, they are killed\*.
+1. Start the demo with the Git repository URL of the crank file.
+2. The Orchestrator watches that file in Git for new versions.
+3. Once a new version `V` is found (or the initial version, when starting), the Orchestrator starts\* N Sling instances with that version.
+4. The crankstart file has a few variables: Sling HTTP port number, MongoDB URL, ZooKeeper URL, etc.
+5. The Sling instances announce themselves to the Orchestrator when ready.
+6. Orchestrator has a target version `V` that it wants to expose via the HTTP front-end. Once N Sling instances have announced themselves with that target version, the Orchestrator activates them atomically on the front-end.
+7. When old Sling instances are not needed anymore, they are killed\*.
 
 (\*) *For the first demo, starting/stopping instances can just be a console message saying "please do this manually" - we can look at automating this later.*
