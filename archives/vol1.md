@@ -15,7 +15,7 @@ the switch.
 The attached diagram explains the scenario. To keep this experiment as simple as possible
 we can start the Sling instances manually with the appropriate configs.
 
-![System structure and scenario](./first-prototype.jpg)
+![System structure and scenario](./vol1.jpg)
 
 Each Sling instance announces itself to Zookeeper with its IP adress and port, indicating
 which config it is running. A Sling StartupListener service can be used to trigger this
