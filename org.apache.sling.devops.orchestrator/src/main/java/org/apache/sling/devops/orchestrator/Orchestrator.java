@@ -103,7 +103,7 @@ public class Orchestrator {
 		this.gitFileMonitor.addListener(new GitFileMonitor.GitFileListener() {
 			@Override
 			public synchronized void onModified(long time, ByteBuffer content) {
-				final String config = "C" + time;
+				final String config = "C" + time / 1000;
 				if (!Orchestrator.this.isConfigOutdated(config)) {
 					Orchestrator.this.targetConfig = config;
 					if (!Orchestrator.this.tryTransition(config)) {
