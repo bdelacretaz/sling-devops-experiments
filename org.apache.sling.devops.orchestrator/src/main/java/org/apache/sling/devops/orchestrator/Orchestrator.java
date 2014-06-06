@@ -186,7 +186,7 @@ public class Orchestrator {
 						newConfig,
 						this.instanceManager.getEndpoints(newConfig)
 						);
-				this.stopMinions(this.runningConfig);
+				if (!newConfig.equals(this.runningConfig)) this.stopMinions(this.runningConfig);
 				this.runningConfig = newConfig;
 				return true;
 			} catch (Exception e) {
