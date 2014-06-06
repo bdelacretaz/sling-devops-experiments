@@ -53,7 +53,6 @@ public class Orchestrator {
 
 	public static final int GIT_PERIOD_DEFAULT = 1;
 	public static final String GIT_PERIOD_UNIT_DEFAULT = "MINUTES";
-	public static final String ZK_CONNECTION_STRING_DEFAULT = "localhost:2181";
 	public static final String HTTPD_PATH_DEFAULT = "apachectl";
 	public static final int N_DEFAULT = 2;
 
