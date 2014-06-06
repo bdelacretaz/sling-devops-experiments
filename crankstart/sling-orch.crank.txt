@@ -4,8 +4,8 @@
 
 # Set default values for our variables
 defaults port 1240
-defaults git_repo /Users/stetsenk/Documents/workspace/Test/blah
-defaults git_file mysling.crank.txt
+defaults git_repo /Users/stetsenk/Desktop/testrepo
+defaults git_file sling-minion.crank.txt
 defaults zk_conn_string localhost:2181
 defaults httpd /opt/httpd-2.4.7/bin/apachectl
 defaults httpd_balancer_config /private/etc/apache2/mod_proxy_balancer.conf
