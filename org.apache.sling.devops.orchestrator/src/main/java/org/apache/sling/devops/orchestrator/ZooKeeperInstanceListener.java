@@ -23,8 +23,6 @@ public abstract class ZooKeeperInstanceListener implements InstanceListener {
 
 	private static final Logger logger = LoggerFactory.getLogger(ZooKeeperInstanceListener.class);
 
-	public static final String ZK_CONNECTION_STRING_PROP = ZooKeeperConnector.ZK_CONNECTION_STRING_PROP;
-
 	private ZooKeeperConnector zkConnector;
 	private final Map<String, Instance> currentInstances = new HashMap<>();
 	private int currentVersion = -1;

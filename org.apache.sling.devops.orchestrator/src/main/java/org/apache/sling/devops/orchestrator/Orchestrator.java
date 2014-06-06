@@ -5,16 +5,19 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
+import org.apache.felix.scr.annotations.Property;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.sling.commons.osgi.PropertiesUtil;
 import org.apache.sling.devops.Instance;
 import org.apache.sling.devops.orchestrator.git.GitFileMonitor;
 import org.apache.sling.devops.orchestrator.git.LocalGitFileMonitor;
 import org.apache.sling.devops.orchestrator.git.RemoteGitFileMonitor;
+import org.apache.sling.devops.zookeeper.ZooKeeperConnector;
 import org.apache.sling.settings.SlingSettingsService;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.osgi.framework.BundleContext;
@@ -27,14 +30,23 @@ public class Orchestrator {
 	private static final Logger logger = LoggerFactory.getLogger(Orchestrator.class);
 
 	public static final String DEVOPS_DIR = "devops";
+	public static final String GIT_WORKING_COPY_DIR = DEVOPS_DIR + "/repo";
+
+	// Properties without default values
 	public static final String GIT_REPO_PATH_PROP = "sling.devops.git.repo";
 	public static final String GIT_REPO_FILE_PATH_PROP = "sling.devops.git.file";
-	public static final String GIT_WORKING_COPY_DIR = DEVOPS_DIR + "/repo";
+	public static final String ZK_CONNECTION_STRING_PROP = ZooKeeperConnector.ZK_CONNECTION_STRING_PROP;
+	public static final String SUDO_PASSWORD_PROP = "sudo.password";
+
+	// Properties with default values
+	public static final String GIT_PERIOD_PROP = "sling.devops.git.period";
+	public static final int GIT_PERIOD_DEFAULT = 1;
+	public static final String GIT_PERIOD_UNIT_PROP = "sling.devops.git.periodunit";
+	public static final String GIT_PERIOD_UNIT_DEFAULT = "MINUTES";
 	public static final String PROXY_EXECUTABLE_PROP = "sling.devops.proxy.executable";
 	public static final String PROXY_EXECUTABLE_DEFAULT = "apachectl";
 	public static final String PROXY_CONFIG_PATH_PROP = "sling.devops.proxy.configPath";
 	public static final String PROXY_CONFIG_PATH_DEFAULT = "/private/etc/apache2/mod_proxy_balancer.conf";
-	public static final String SUDO_PASSWORD_PROP = "sudo.password";
 	public static final String N_PROP = "sling.devops.orchestrator.n";
 	public static final int N_DEFAULT = 2;
 
@@ -68,7 +80,7 @@ public class Orchestrator {
 
 		// Setup instance listener
 		this.instanceListener = new ZooKeeperInstanceListener(
-				(String)bundleContext.getProperty(ZooKeeperInstanceListener.ZK_CONNECTION_STRING_PROP)) {
+				(String)bundleContext.getProperty(ZK_CONNECTION_STRING_PROP)) {
 
 			@Override
 			public void onInstanceAdded(Instance instance) {
@@ -89,16 +101,26 @@ public class Orchestrator {
 		};
 
 		// Setup Git monitor
-		final String gitRepoPath = PropertiesUtil.toString(bundleContext.getProperty(GIT_REPO_PATH_PROP), null);
-		final String gitRepoFilePath = PropertiesUtil.toString(bundleContext.getProperty(GIT_REPO_FILE_PATH_PROP), null);
+		final String gitRepoPath = bundleContext.getProperty(GIT_REPO_PATH_PROP);
+		final String gitRepoFilePath = bundleContext.getProperty(GIT_REPO_FILE_PATH_PROP);
+		final int gitRepoPeriod = PropertiesUtil.toInteger(bundleContext.getProperty(GIT_PERIOD_PROP), GIT_PERIOD_DEFAULT);
+		final TimeUnit gitRepoTimeUnit = TimeUnit.valueOf(
+				PropertiesUtil.toString(bundleContext.getProperty(GIT_PERIOD_UNIT_PROP), GIT_PERIOD_UNIT_DEFAULT));
 		if (gitRepoPath.contains("://")) { // assume remote
 			this.gitFileMonitor = new RemoteGitFileMonitor(
 					gitRepoPath,
 					this.slingSettingsService.getAbsolutePathWithinSlingHome(GIT_WORKING_COPY_DIR),
-					gitRepoFilePath
+					gitRepoFilePath,
+					gitRepoPeriod,
+					gitRepoTimeUnit
 					);
 		} else {
-			this.gitFileMonitor = new LocalGitFileMonitor(gitRepoPath, gitRepoFilePath);
+			this.gitFileMonitor = new LocalGitFileMonitor(
+					gitRepoPath,
+					gitRepoFilePath,
+					gitRepoPeriod,
+					gitRepoTimeUnit
+					);
 		}
 		this.gitFileMonitor.addListener(new GitFileMonitor.GitFileListener() {
 			@Override

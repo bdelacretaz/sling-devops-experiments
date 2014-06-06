@@ -12,10 +12,6 @@ import org.eclipse.jgit.api.errors.GitAPIException;
 
 public class LocalGitFileMonitor extends GitFileMonitor {
 
-	public LocalGitFileMonitor(final String repoPath, final String filePath) throws IOException {
-		this(repoPath, filePath, DEFAULT_PERIOD, DEFAULT_PERIOD_UNIT);
-	}
-
 	public LocalGitFileMonitor(final String repoPath, final String filePath, final int period, final TimeUnit periodUnit) throws IOException {
 		super(Git.open(new File(repoPath)), filePath, period, periodUnit);
 		logger.info("Monitoring file {} in local Git repository {}.", filePath, repoPath);

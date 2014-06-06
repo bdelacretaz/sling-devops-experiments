@@ -12,14 +12,6 @@ import org.eclipse.jgit.api.errors.GitAPIException;
 
 public class RemoteGitFileMonitor extends GitFileMonitor {
 
-	public RemoteGitFileMonitor(final String repoUrl, final String filePath) throws GitAPIException, IOException {
-		this(repoUrl, filePath, DEFAULT_PERIOD, DEFAULT_PERIOD_UNIT);
-	}
-
-	public RemoteGitFileMonitor(final String repoUrl, final String localParentPath, final String filePath) throws GitAPIException, IOException {
-		this(repoUrl, localParentPath, filePath, DEFAULT_PERIOD, DEFAULT_PERIOD_UNIT);
-	}
-
 	public RemoteGitFileMonitor(final String repoUrl, final String filePath, final int period, final TimeUnit periodUnit) throws GitAPIException, IOException {
 		this(repoUrl, Files.createTempDirectory("gitmon").toAbsolutePath().toString(), filePath, period, periodUnit);
 	}

@@ -29,9 +29,6 @@ public abstract class GitFileMonitor implements Closeable {
 
 	protected static final Logger logger = LoggerFactory.getLogger(GitFileMonitor.class);
 
-	public static final int DEFAULT_PERIOD = 1;
-	public static final TimeUnit DEFAULT_PERIOD_UNIT = TimeUnit.MINUTES;
-
 	private final Git git;
 	private final Repository repo;
 	private final RevWalk revWalk;
