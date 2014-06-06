@@ -3,12 +3,13 @@
 # bundles or properties that the Sling launchpad provides
 
 # Set default values for our variables
-defaults port 1240
-defaults git_repo /Users/stetsenk/Documents/workspace/Test/blah
-defaults git_file mysling.crank.txt
+# Must set these three on command line
+# defaults port 1234
+# defaults config C1
+# defaults instance 1
 defaults zk_conn_string localhost:2181
-defaults httpd /opt/httpd-2.4.7/bin/apachectl
-defaults httpd_balancer_config /private/etc/apache2/mod_proxy_balancer.conf
+defaults mongo_uri mongodb://localhost:27017
+defaults mongo_db oakblahblah
 
 # Set bootstrap classpath, mvn: protocol can be used
 classpath mvn:org.apache.felix/org.apache.felix.framework/4.4.0
@@ -24,14 +25,15 @@ classpath mvn:org.apache.sling/org.apache.sling.crankstart.api/0.0.1-SNAPSHOT
 
 # Set OSGi framework properties
 osgi.property org.osgi.service.http.port ${port}
-osgi.property sling.home sling-orch-crankstart
-osgi.property org.osgi.framework.storage sling-orch-crankstart/osgi.framework.storage
+osgi.property sling.home sling-${config}-${instance}-crankstart
+osgi.property org.osgi.framework.storage sling-${config}-${instance}-crankstart/osgi.framework.storage
 osgi.property org.apache.sling.commons.log.level INFO
 osgi.property org.apache.sling.commons.log.file logs/error.log
 osgi.property org.apache.sling.commons.log.file.number 5
 osgi.property org.apache.sling.commons.log.file.size '.'yyyy-MM-dd
 osgi.property felix.startlevel.bundle 22
 osgi.property org.osgi.framework.startlevel.beginning 32
+osgi.property sling.devops.config ${config}
 
 # Once OSGi properties are set, start the framework
 start.framework
@@ -40,12 +42,18 @@ start.framework
 bundle mvn:org.apache.felix/org.apache.felix.configadmin/1.6.0
 start.all.bundles
 
-config org.apache.sling.devops.orchestrator.Orchestrator
-	sling.devops.git.repo = ${git_repo}
-	sling.devops.git.file = ${git_file}
+# Once Configuration Admin is loaded, we can set configurations
+config org.apache.sling.devops.minion.Minion
 	sling.devops.zookeeper.connString = ${zk_conn_string}
-	sling.devops.httpd = ${httpd}
-	sling.devops.httpd.balancer.config = ${httpd_balancer_config}
+config org.apache.sling.installer.provider.jcr.impl.JcrInstaller
+	sling.jcrinstall.search.path = /sling-cfg/${config}/apps:200
+	sling.jcrinstall.search.path = /sling-cfg/${config}/libs:100
+config org.apache.sling.jcr.resource.internal.JcrResourceResolverFactoryImpl
+	resource.resolver.searchpath = /sling-cfg/${config}/apps
+	resource.resolver.searchpath = /sling-cfg/${config}/libs
+config org.apache.jackrabbit.oak.plugins.document.DocumentNodeStoreService
+	mongouri = ${mongo_uri}
+	db = ${mongo_db}
 
 # Install bundles
 # mvn: protocol can be used.
@@ -94,7 +102,7 @@ bundle mvn:org.apache.sling/org.apache.sling.adapter/2.1.0
 bundle mvn:org.apache.sling/org.apache.sling.servlets.resolver/2.3.2
 bundle mvn:org.apache.sling/org.apache.sling.servlets.get/2.1.8
 bundle mvn:org.apache.sling/org.apache.sling.servlets.post/2.3.4
-bundle mvn:org.apache.sling/org.apache.sling.jcr.contentloader/2.1.6
+bundle mvn:org.apache.sling/org.apache.sling.jcr.contentloader/2.1.9-SNAPSHOT
 bundle mvn:org.apache.sling/org.apache.sling.jcr.resource/2.3.6
 bundle mvn:org.apache.sling/org.apache.sling.jcr.ocm/2.0.4-incubator
 bundle mvn:org.apache.sling/org.apache.sling.jcr.classloader/3.2.0
@@ -139,10 +147,10 @@ bundle mvn:org.apache.sling/org.apache.sling.jcr.jcr-wrapper/2.0.0
 bundle mvn:org.apache.sling/org.apache.sling.jcr.api/2.2.0
 bundle mvn:org.apache.sling/org.apache.sling.jcr.base/2.2.2
 bundle mvn:org.apache.sling/org.apache.sling.jcr.registration/1.0.0
-bundle mvn:org.apache.jackrabbit/jackrabbit-api/2.7.4
+bundle mvn:org.apache.jackrabbit/jackrabbit-api/2.7.5
 bundle mvn:org.apache.sling/org.apache.sling.jcr.jackrabbit.usermanager/2.2.0
 bundle mvn:org.apache.sling/org.apache.sling.jcr.jackrabbit.accessmanager/2.1.0
-bundle mvn:org.apache.jackrabbit/jackrabbit-jcr-commons/2.7.4
+bundle mvn:org.apache.jackrabbit/jackrabbit-jcr-commons/2.7.5
 bundle mvn:org.apache.jackrabbit/jackrabbit-spi/2.7.1
 bundle mvn:org.apache.jackrabbit/jackrabbit-spi-commons/2.7.1
 bundle mvn:org.apache.jackrabbit/jackrabbit-webdav/2.7.1
@@ -154,21 +162,19 @@ bundle mvn:org.apache.sling/org.apache.sling.launchpad.api/1.1.0
 bundle mvn:org.apache.sling/org.apache.sling.launchpad.karaf/0.1.1-SNAPSHOT
 
 # Jackrabbit-specific bundles
-bundle mvn:org.apache.derby/derby/10.5.3.0_1
-bundle mvn:org.apache.sling/org.apache.sling.jcr.jackrabbit.server/2.1.3-SNAPSHOT
+#bundle mvn:org.apache.derby/derby/10.5.3.0_1
+#bundle mvn:org.apache.sling/org.apache.sling.jcr.jackrabbit.server/2.1.3-SNAPSHOT
 
 # Oak-specific bundles
-#bundle mvn:commons-beanutils/commons-beanutils/1.9.1
-#bundle mvn:com.googlecode.json-simple/json-simple/1.1.1
-#bundle mvn:org.apache.jackrabbit/oak-core/0.18
-#bundle mvn:org.apache.jackrabbit/oak-blob/0.18
-#bundle mvn:org.apache.jackrabbit/oak-commons/0.18
-#bundle mvn:org.apache.jackrabbit/oak-mk/0.18
-#bundle mvn:org.apache.jackrabbit/oak-mk-api/0.18
-#bundle mvn:org.apache.jackrabbit/oak-mk-remote/0.18
-#bundle mvn:org.apache.jackrabbit/oak-lucene/0.18
-#bundle mvn:org.mongodb/mongo-java-driver/2.11.4
-#bundle mvn:org.apache.sling/org.apache.sling.jcr.oak.server/0.0.1-SNAPSHOT
+bundle mvn:org.apache.jackrabbit/oak-core/1.0.0
+bundle mvn:org.apache.jackrabbit/oak-blob/1.0.0
+bundle mvn:org.apache.jackrabbit/oak-commons/1.0.0
+bundle mvn:org.apache.jackrabbit/oak-mk/1.0.0
+bundle mvn:org.apache.jackrabbit/oak-mk-api/1.0.0
+bundle mvn:org.apache.jackrabbit/oak-mk-remote/1.0.0
+bundle mvn:org.apache.jackrabbit/oak-lucene/1.0.0
+bundle mvn:org.mongodb/mongo-java-driver/2.11.4
+bundle mvn:org.apache.sling/org.apache.sling.jcr.oak.server/0.0.2-SNAPSHOT
 
 # Bundles for integration-tests
 #bundle mvn:org.apache.sling/org.apache.sling.servlets.compat/1.0.0-SNAPSHOT
@@ -178,12 +184,17 @@ bundle mvn:org.apache.sling/org.apache.sling.jcr.jackrabbit.server/2.1.3-SNAPSHO
 #bundle mvn:org.apache.sling/org.apache.sling.launchpad.test-services/2.0.9-SNAPSHOT
 #bundle mvn:org.apache.sling/org.apache.sling.launchpad.test-fragment/2.0.9-SNAPSHOT
 
-# DevOps Common bundles
+# DevOps Minion bundles
 bundle mvn:org.apache.zookeeper/zookeeper/3.3.6
+bundle mvn:org.apache.sling/org.apache.sling.hc.core/1.1.0
+bundle mvn:org.apache.sling/org.apache.sling.junit.core/1.0.8
+bundle mvn:org.apache.sling/org.apache.sling.junit.healthcheck/1.0.6
+bundle mvn:org.apache.sling/org.apache.sling.hc.webconsole/1.1.0
 bundle mvn:org.apache.sling/org.apache.sling.devops.common/0.0.1-SNAPSHOT
+bundle mvn:org.apache.sling/org.apache.sling.devops.minion/0.0.1-SNAPSHOT
 
-# DevOps Orchestrator bundles
-bundle mvn:org.apache.sling/org.apache.sling.devops.orchestrator/0.0.1-SNAPSHOT
+# Minion test bundle with a service and a script - for varying between versions 0.0.1 and 0.0.2
+bundle mvn:org.apache.sling/org.apache.sling.samples.test/0.0.1
 
 # Now start bundles
 start.all.bundles

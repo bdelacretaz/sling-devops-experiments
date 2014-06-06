@@ -9,7 +9,9 @@ import java.util.Hashtable;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
+import org.apache.felix.scr.annotations.Property;
 import org.apache.felix.scr.annotations.Reference;
+import org.apache.sling.commons.osgi.PropertiesUtil;
 import org.apache.sling.devops.Instance;
 import org.apache.sling.devops.minion.test.SearchPathTest;
 import org.apache.sling.discovery.DiscoveryService;
@@ -18,10 +20,10 @@ import org.apache.sling.hc.api.HealthCheck;
 import org.apache.sling.hc.api.execution.HealthCheckExecutor;
 import org.apache.sling.installer.provider.jcr.impl.JcrInstaller;
 import org.apache.sling.resourceresolver.impl.ResourceResolverFactoryActivator;
-import org.osgi.framework.BundleContext;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.service.cm.Configuration;
 import org.osgi.service.cm.ConfigurationAdmin;
+import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +45,9 @@ public class Minion {
 	public static final String[] HC_TAGS = new String[]{ "devops", "minion" };
 	public static final String HC_PACKAGE = SearchPathTest.class.getPackage().getName();
 
+	@Property(label = "ZooKeeper connection string")
+	public static final String ZK_CONNECTION_STRING_PROP = "sling.devops.zookeeper.connString";
+
 	@Reference
 	private ConfigurationAdmin configurationAdmin;
 
@@ -57,10 +62,11 @@ public class Minion {
 	private HealthCheckMonitor healthCheckMonitor;
 
 	@Activate
-	public void onActivate(BundleContext bundleContext) throws IOException, InvalidSyntaxException {
-		this.config = (String)bundleContext.getProperty(CONFIG_PROP);
+	public void onActivate(final ComponentContext componentContext) throws IOException, InvalidSyntaxException {
+		final Dictionary<?, ?> properties = componentContext.getProperties();
+		this.config = componentContext.getBundleContext().getProperty(CONFIG_PROP);
 		this.instanceAnnouncer = new ZooKeeperInstanceAnnouncer(
-				(String)bundleContext.getProperty(ZooKeeperInstanceAnnouncer.ZK_CONNECTION_STRING_PROP));
+				PropertiesUtil.toString(properties.get(ZK_CONNECTION_STRING_PROP), null));
 
 		// Check health check config
 		final Configuration[] hcConfigs = this.configurationAdmin.listConfigurations(String.format(

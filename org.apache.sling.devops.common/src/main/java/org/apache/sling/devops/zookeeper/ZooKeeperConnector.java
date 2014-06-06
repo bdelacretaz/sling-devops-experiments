@@ -15,19 +15,16 @@ public class ZooKeeperConnector implements Closeable {
 
 	private static final Logger logger = LoggerFactory.getLogger(ZooKeeperConnector.class);
 
-	public static final String ZK_CONNECTION_STRING_PROP = "sling.devops.zookeeper.connString";
-	public static final String ZK_CONNECTION_STRING_DEFAULT = "localhost:2181";
 	public static final String ZK_ROOT = "/sling"; // no hierarchy, top-level node name only
 	public static final int ZK_SESSION_TIMEOUT = 30 * 1000;
 
 	private final ZooKeeper zooKeeper;
 
-	public ZooKeeperConnector(String connectionString, Watcher watcher) throws IOException {
+	public ZooKeeperConnector(final String connectionString, final Watcher watcher) throws IOException {
 		this(connectionString, ZK_SESSION_TIMEOUT, watcher);
 	}
 
-	public ZooKeeperConnector(String connectionString, int sessionTimeout, Watcher watcher) throws IOException {
-		if (connectionString == null) connectionString = ZK_CONNECTION_STRING_DEFAULT;
+	public ZooKeeperConnector(final String connectionString, final int sessionTimeout, final Watcher watcher) throws IOException {
 		this.zooKeeper = new ZooKeeper(
 				connectionString + ZK_ROOT,
 				sessionTimeout,

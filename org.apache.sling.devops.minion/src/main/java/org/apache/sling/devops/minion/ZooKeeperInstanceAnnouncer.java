@@ -19,8 +19,6 @@ public class ZooKeeperInstanceAnnouncer implements InstanceAnnouncer {
 
 	private static final Logger logger = LoggerFactory.getLogger(ZooKeeperInstanceAnnouncer.class);
 
-	public static final String ZK_CONNECTION_STRING_PROP = ZooKeeperConnector.ZK_CONNECTION_STRING_PROP;
-
 	private ZooKeeperConnector zkConnector;
 
 	public ZooKeeperInstanceAnnouncer(String connectionString) throws IOException {

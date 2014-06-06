@@ -5,6 +5,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.Dictionary;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.felix.scr.annotations.Activate;
@@ -17,10 +18,9 @@ import org.apache.sling.devops.Instance;
 import org.apache.sling.devops.orchestrator.git.GitFileMonitor;
 import org.apache.sling.devops.orchestrator.git.LocalGitFileMonitor;
 import org.apache.sling.devops.orchestrator.git.RemoteGitFileMonitor;
-import org.apache.sling.devops.zookeeper.ZooKeeperConnector;
 import org.apache.sling.settings.SlingSettingsService;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.osgi.framework.BundleContext;
+import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,23 +32,42 @@ public class Orchestrator {
 	public static final String DEVOPS_DIR = "devops";
 	public static final String GIT_WORKING_COPY_DIR = DEVOPS_DIR + "/repo";
 
-	// Properties without default values
+	/* Properties without default values */
+
+	@Property(label = "Path to the monitored Git repository")
 	public static final String GIT_REPO_PATH_PROP = "sling.devops.git.repo";
+
+	@Property(label = "Path to the monitored file within the Git repository")
 	public static final String GIT_REPO_FILE_PATH_PROP = "sling.devops.git.file";
-	public static final String ZK_CONNECTION_STRING_PROP = ZooKeeperConnector.ZK_CONNECTION_STRING_PROP;
+
+	@Property(label = "ZooKeeper connection string")
+	public static final String ZK_CONNECTION_STRING_PROP = "sling.devops.zookeeper.connString";
+
+	@Property(label = "Path to mod_proxy_balancer config file")
+	public static final String HTTPD_BALANCER_CONFIG_PATH_PROP = "sling.devops.httpd.balancer.config";
+
+	@Property(label = "Password for sudo command")
 	public static final String SUDO_PASSWORD_PROP = "sudo.password";
 
-	// Properties with default values
-	public static final String GIT_PERIOD_PROP = "sling.devops.git.period";
+	/* Properties with default values */
+
 	public static final int GIT_PERIOD_DEFAULT = 1;
-	public static final String GIT_PERIOD_UNIT_PROP = "sling.devops.git.periodunit";
 	public static final String GIT_PERIOD_UNIT_DEFAULT = "MINUTES";
-	public static final String PROXY_EXECUTABLE_PROP = "sling.devops.proxy.executable";
-	public static final String PROXY_EXECUTABLE_DEFAULT = "apachectl";
-	public static final String PROXY_CONFIG_PATH_PROP = "sling.devops.proxy.configPath";
-	public static final String PROXY_CONFIG_PATH_DEFAULT = "/private/etc/apache2/mod_proxy_balancer.conf";
-	public static final String N_PROP = "sling.devops.orchestrator.n";
+	public static final String ZK_CONNECTION_STRING_DEFAULT = "localhost:2181";
+	public static final String HTTPD_PATH_DEFAULT = "apachectl";
 	public static final int N_DEFAULT = 2;
+
+	@Property(label = "Period for Git repository polling", intValue = GIT_PERIOD_DEFAULT)
+	public static final String GIT_PERIOD_PROP = "sling.devops.git.period";
+
+	@Property(label = "Period unit for Git repository polling", value = GIT_PERIOD_UNIT_DEFAULT)
+	public static final String GIT_PERIOD_UNIT_PROP = "sling.devops.git.period.unit";
+
+	@Property(label = "Path to the httpd executable", value = HTTPD_PATH_DEFAULT)
+	public static final String HTTPD_PATH_PROP = "sling.devops.httpd";
+
+	@Property(label = "N, the number of Minions running a config must be available before it is transitioned to", intValue = N_DEFAULT)
+	public static final String N_PROP = "sling.devops.orchestrator.n";
 
 	@Reference
 	private SlingSettingsService slingSettingsService;
@@ -63,8 +82,9 @@ public class Orchestrator {
 	private String targetConfig = "";
 
 	@Activate
-	public void onActivate(BundleContext bundleContext) throws GitAPIException, IOException, InterruptedException {
-		this.n = PropertiesUtil.toInteger(bundleContext.getProperty(N_PROP), N_DEFAULT);
+	public void onActivate(final ComponentContext componentContext) throws GitAPIException, IOException, InterruptedException {
+		final Dictionary<?, ?> properties = componentContext.getProperties();
+		this.n = PropertiesUtil.toInteger(properties.get(N_PROP), N_DEFAULT);
 		this.instanceManager = new InstanceManager();
 
 		// Create devops directory
@@ -73,14 +93,14 @@ public class Orchestrator {
 
 		// Setup config transitioner
 		this.configTransitioner = new ModProxyConfigTransitioner(
-				PropertiesUtil.toString(bundleContext.getProperty(PROXY_EXECUTABLE_PROP), PROXY_EXECUTABLE_DEFAULT),
-				PropertiesUtil.toString(bundleContext.getProperty(PROXY_CONFIG_PATH_PROP), PROXY_CONFIG_PATH_DEFAULT),
-				(String)bundleContext.getProperty(SUDO_PASSWORD_PROP)
+				PropertiesUtil.toString(properties.get(HTTPD_PATH_PROP), HTTPD_PATH_DEFAULT),
+				PropertiesUtil.toString(properties.get(HTTPD_BALANCER_CONFIG_PATH_PROP), null),
+				PropertiesUtil.toString(properties.get(SUDO_PASSWORD_PROP), null)
 				);
 
 		// Setup instance listener
 		this.instanceListener = new ZooKeeperInstanceListener(
-				(String)bundleContext.getProperty(ZK_CONNECTION_STRING_PROP)) {
+				PropertiesUtil.toString(properties.get(ZK_CONNECTION_STRING_PROP), null)) {
 
 			@Override
 			public void onInstanceAdded(Instance instance) {
@@ -101,11 +121,11 @@ public class Orchestrator {
 		};
 
 		// Setup Git monitor
-		final String gitRepoPath = bundleContext.getProperty(GIT_REPO_PATH_PROP);
-		final String gitRepoFilePath = bundleContext.getProperty(GIT_REPO_FILE_PATH_PROP);
-		final int gitRepoPeriod = PropertiesUtil.toInteger(bundleContext.getProperty(GIT_PERIOD_PROP), GIT_PERIOD_DEFAULT);
+		final String gitRepoPath = PropertiesUtil.toString(properties.get(GIT_REPO_PATH_PROP), null);
+		final String gitRepoFilePath = PropertiesUtil.toString(properties.get(GIT_REPO_FILE_PATH_PROP), null);
+		final int gitRepoPeriod = PropertiesUtil.toInteger(properties.get(GIT_PERIOD_PROP), GIT_PERIOD_DEFAULT);
 		final TimeUnit gitRepoTimeUnit = TimeUnit.valueOf(
-				PropertiesUtil.toString(bundleContext.getProperty(GIT_PERIOD_UNIT_PROP), GIT_PERIOD_UNIT_DEFAULT));
+				PropertiesUtil.toString(properties.get(GIT_PERIOD_UNIT_PROP), GIT_PERIOD_UNIT_DEFAULT));
 		if (gitRepoPath.contains("://")) { // assume remote
 			this.gitFileMonitor = new RemoteGitFileMonitor(
 					gitRepoPath,
