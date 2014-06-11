@@ -1,0 +1,5 @@
+{
+	"jcr:primaryType": "nt:unstructured",
+	"sling:resourceType": "foo/bar",
+	"text": "The quick brown fox jumps over the lazy dog"
+}
