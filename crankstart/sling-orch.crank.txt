@@ -6,6 +6,8 @@
 defaults port 1240
 defaults git_repo /Users/stetsenk/Desktop/testrepo
 defaults git_file sling-minion.crank.txt
+defaults git_period 5
+defaults git_period_unit SECONDS
 defaults zk_conn_string localhost:2181
 defaults httpd /opt/httpd-2.4.7/bin/apachectl
 defaults httpd_balancer_config /private/etc/apache2/mod_proxy_balancer.conf
@@ -43,6 +45,8 @@ start.all.bundles
 config org.apache.sling.devops.orchestrator.Orchestrator
 	sling.devops.git.repo = ${git_repo}
 	sling.devops.git.file = ${git_file}
+	sling.devops.git.period = ${git_period}
+	sling.devops.git.period.unit = ${git_period_unit}
 	sling.devops.zookeeper.connString = ${zk_conn_string}
 	sling.devops.httpd = ${httpd}
 	sling.devops.httpd.balancer.config = ${httpd_balancer_config}
