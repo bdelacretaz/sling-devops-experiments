@@ -123,10 +123,14 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   CRANKSTART_LAUNCHER_PATH = "~/Desktop/crankstart/launcher/target/org.apache.sling.crankstart.launcher-0.0.1-SNAPSHOT.jar"
   MAVEN_REPO_PATH = "~/.m2/repository"
 
+  # Make config values predictable
+  GIT_FAKE_TIMESTAMP1 = "Tue Jun 10 10:00:00 2014 +0200"
+  GIT_FAKE_TIMESTAMP1_EPOCH = 1402387200
+  GIT_FAKE_TIMESTAMP2 = "Tue Jun 10 11:00:00 2014 +0200"
+
   config.vm.synced_folder MAVEN_REPO_PATH, "/root/.m2/repository"
 
   # Copy files and bootstrap
-  config.vm.provision "file", source: "../scripts", destination: "."
   config.vm.provision "file", source: CRANKSTART_LAUNCHER_PATH, destination: "crankstart-launcher.jar"
   config.vm.provision "shell", path: "bootstrap.sh"
 
@@ -142,7 +146,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     orchestrator.vm.provision "shell", inline: "apt-get install -y python-software-properties" # apt-add-repository command
     orchestrator.vm.provision "shell", inline: "apt-add-repository ppa:ondrej/apache2" # for latest apache 2.4 instead of 2.2
     orchestrator.vm.provision "shell", inline: "apt-get update"
-    orchestrator.vm.provision "shell", inline: "apt-get install -y apache2 zookeeperd mongodb"
+    orchestrator.vm.provision "shell", inline: "apt-get install -y apache2 zookeeperd mongodb git"
 
     # Configure Apache
     orchestrator.vm.provision "file", source: "apache2-sling-frontend.conf", destination: "apache2-sling-frontend.conf"
@@ -166,10 +170,15 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     # Drop oak database from MongoDB
     orchestrator.vm.provision "shell", inline: "mongo oak --eval 'db.dropDatabase()'"
 
+    # Configure Git repo
+    orchestrator.vm.provision "shell", inline: "rm -rf testrepo && mkdir testrepo"
+    orchestrator.vm.provision "file", source: "../crankstart/sling-minion.crank.txt", destination: "sling-minion.crank.txt"
+    orchestrator.vm.provision "shell", inline: "mv sling-minion.crank.txt testrepo/ && cd testrepo && git init && git add sling-minion.crank.txt && GIT_AUTHOR_DATE='#{GIT_FAKE_TIMESTAMP1}' GIT_COMMITTER_DATE='#{GIT_FAKE_TIMESTAMP1}' git commit -m '1'"
+
     # Launch Sling and configure
     orchestrator.vm.provision "file", source: "../crankstart/sling-orch.crank.txt", destination: "sling-orch.crank.txt"
     orchestrator.vm.provision "shell", inline: "rm -rf sling-orch-crankstart/ crankstart-launcher.out"
-    orchestrator.vm.provision "shell", inline: "java -Djava.security.egd=file:/dev/./urandom -Dport=8080 -Dproxy_executable=apachectl -Dsling.devops.proxy.configPath=/etc/apache2/mod_proxy_balancer.conf -jar crankstart-launcher.jar sling-orch.crank.txt &> crankstart-launcher.out & echo $! > crankstart-launcher.pid"
+    orchestrator.vm.provision "shell", inline: "java -Djava.security.egd=file:/dev/./urandom -Dport=8080 -Dgit_repo=/home/vagrant/testrepo -Dhttpd=apachectl -Dhttpd_balancer_config=/etc/apache2/mod_proxy_balancer.conf -jar crankstart-launcher.jar sling-orch.crank.txt &> crankstart-launcher.out & echo $! > crankstart-launcher.pid"
     orchestrator.vm.provision "shell", inline: "tail -n1000 -f crankstart-launcher.out & pid=$! && sleep 30s && kill $pid"
   end
 
@@ -179,25 +188,23 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   # Configure Minion VMs
   (0..(CONFIGS * INSTANCES_PER_CONFIG - 1)).each do |i|
-    _config_num = "#{i / INSTANCES_PER_CONFIG + 1}"
-    _config = "C#{_config_num}"
-    _instance = "#{i % INSTANCES_PER_CONFIG + 1}"
-    config.vm.define "minion-#{_config}-#{_instance}" do |minion|
+    _config_num = i / INSTANCES_PER_CONFIG + 1
+    _config = "C#{GIT_FAKE_TIMESTAMP1_EPOCH + (_config_num - 1) * 3600}"
+    _instance = i % INSTANCES_PER_CONFIG + 1
+    config.vm.define "minion-C#{_config_num}-#{_instance}" do |minion|
 
       # Configure IP to be 10.10.10.<config><instance>, e.g. 10.10.10.21 for first minion with config C2
       minion.vm.network "private_network", ip: "10.10.10.#{_config_num}#{_instance}"
 
-      # Copy additional files
-      minion.vm.provision "file", source: "../resources", destination: "."
+      # Get crank.txt file from orchestrator (if this is minion C2, first try to commit new file go orchestrator's git repo)
+      minion.vm.provision "shell", inline: "apt-get install -y sshpass"
+      minion.vm.provision "shell", inline: "if [ #{_config_num} = 2 ]; then sshpass -p vagrant ssh -oStrictHostKeyChecking=no vagrant@10.10.10.10 \"cd testrepo && sudo perl -pi -e 's/mvn:org.apache.sling\\/org.apache.sling.samples.test\\/0.0.1/mvn:org.apache.sling\\/org.apache.sling.samples.test\\/0.0.2/g' sling-minion.crank.txt && sudo git add -A && git diff --quiet --exit-code --cached || GIT_AUTHOR_DATE='#{GIT_FAKE_TIMESTAMP2}' GIT_COMMITTER_DATE='#{GIT_FAKE_TIMESTAMP2}' sudo -E git commit -am '2'\" && sleep 10s; fi"
+      minion.vm.provision "shell", inline: "sshpass -p vagrant scp -oStrictHostKeyChecking=no vagrant@10.10.10.10:/home/vagrant/sling-orch-crankstart/devops/#{_config}.crank.txt ."
 
       # Launch Sling and configure
-      minion.vm.provision "file", source: "../crankstart/sling-#{_config}-#{_instance}.crank.txt", destination: "sling-#{_config}-#{_instance}.crank.txt"
       minion.vm.provision "shell", inline: "rm -rf sling-#{_config}-#{_instance}-crankstart/ crankstart-launcher.out"
-      minion.vm.provision "shell", inline: "java -Djava.security.egd=file:/dev/./urandom -Dport=8080 -Dmongo_uri=mongodb://10.10.10.10:27017 -Dmongo_db=oak -Dsling.devops.zookeeper.connString=10.10.10.10:2181 -jar crankstart-launcher.jar sling-#{_config}-#{_instance}.crank.txt &> crankstart-launcher.out & echo $! > crankstart-launcher.pid"
+      minion.vm.provision "shell", inline: "java -Djava.security.egd=file:/dev/./urandom -Dport=8080 -Dconfig=#{_config} -Dinstance=#{_instance} -Dmongo_uri=mongodb://10.10.10.10:27017 -Dmongo_db=oak -Dzk_conn_string=10.10.10.10:2181 -jar crankstart-launcher.jar #{_config}.crank.txt &> crankstart-launcher.out & echo $! > crankstart-launcher.pid"
       minion.vm.provision "shell", inline: "tail -n1000 -f crankstart-launcher.out & pid=$! && sleep 30s && kill $pid"
-      
-      # setup-minion-repo.sh should only run on the first instance of a config
-      minion.vm.provision "shell", inline: "if [ #{_instance} = 1 ]; then scripts/setup-minion-repo.sh #{_config} localhost:8080; fi"
     end
   end
 end
