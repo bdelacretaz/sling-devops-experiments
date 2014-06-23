@@ -38,8 +38,12 @@ public class InstanceManager {
 		if (id == null) throw new IllegalArgumentException("ID cannot be null.");
 		Instance instance = this.instances.remove(id);
 		String bestEndpoint = this.bestEndpoints.remove(id);
-		if (instance != null && this.configEndpoints.containsKey(instance.getConfig())) {
-			this.configEndpoints.get(instance.getConfig()).remove(bestEndpoint);
+		String config = instance.getConfig();
+		if (instance != null && this.configEndpoints.containsKey(config)) {
+			this.configEndpoints.get(config).remove(bestEndpoint);
+			if (this.configEndpoints.get(config).isEmpty()) {
+				this.configEndpoints.remove(config);
+			}
 		}
 	}
 
