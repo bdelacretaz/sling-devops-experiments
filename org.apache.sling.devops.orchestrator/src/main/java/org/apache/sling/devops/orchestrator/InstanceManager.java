@@ -1,5 +1,6 @@
 package org.apache.sling.devops.orchestrator;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -40,6 +41,10 @@ public class InstanceManager {
 		if (instance != null && this.configEndpoints.containsKey(instance.getConfig())) {
 			this.configEndpoints.get(instance.getConfig()).remove(bestEndpoint);
 		}
+	}
+
+	public Map<String, Set<String>> getConfigs() {
+		return Collections.unmodifiableMap(this.configEndpoints);
 	}
 
 	private String pickBestEndpoint(Set<String> endpoints) {

@@ -1,0 +1,299 @@
+package org.apache.sling.devops.orchestrator;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Dictionary;
+import java.util.Hashtable;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.felix.scr.annotations.Activate;
+import org.apache.felix.scr.annotations.Component;
+import org.apache.felix.scr.annotations.Deactivate;
+import org.apache.felix.scr.annotations.Property;
+import org.apache.felix.scr.annotations.Reference;
+import org.apache.felix.scr.annotations.Service;
+import org.apache.sling.commons.osgi.PropertiesUtil;
+import org.apache.sling.devops.Instance;
+import org.apache.sling.devops.orchestrator.git.GitFileMonitor;
+import org.apache.sling.devops.orchestrator.git.LocalGitFileMonitor;
+import org.apache.sling.devops.orchestrator.git.RemoteGitFileMonitor;
+import org.apache.sling.settings.SlingSettingsService;
+import org.eclipse.jgit.api.errors.GitAPIException;
+import org.osgi.service.component.ComponentContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.Appender;
+import ch.qos.logback.core.read.ListAppender;
+
+@Component(immediate=true)
+@Service
+public class DefaultOrchestrator implements Orchestrator {
+
+	private static final Logger logger = LoggerFactory.getLogger(DefaultOrchestrator.class);
+	private static final Dictionary<String, Object> APPENDER_PROPERTIES = new Hashtable<>();
+	static {
+		APPENDER_PROPERTIES.put("loggers", new String[]{ DefaultOrchestrator.class.getName() });
+	}
+	private static final SimpleDateFormat APPENDER_DATE_FORMAT = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss.SSS");
+
+	public static final String DEVOPS_DIR = "devops";
+	public static final String GIT_WORKING_COPY_DIR = DEVOPS_DIR + "/repo";
+
+	/* Properties without default values */
+
+	@Property(label = "Path to the monitored Git repository")
+	public static final String GIT_REPO_PATH_PROP = "sling.devops.git.repo";
+
+	@Property(label = "Path to the monitored file within the Git repository")
+	public static final String GIT_REPO_FILE_PATH_PROP = "sling.devops.git.file";
+
+	@Property(label = "ZooKeeper connection string")
+	public static final String ZK_CONNECTION_STRING_PROP = "sling.devops.zookeeper.connString";
+
+	@Property(label = "Path to mod_proxy_balancer config file")
+	public static final String HTTPD_BALANCER_CONFIG_PATH_PROP = "sling.devops.httpd.balancer.config";
+
+	@Property(label = "Password for sudo command")
+	public static final String SUDO_PASSWORD_PROP = "sudo.password";
+
+	/* Properties with default values */
+
+	public static final int GIT_PERIOD_DEFAULT = 1;
+	public static final String GIT_PERIOD_UNIT_DEFAULT = "MINUTES";
+	public static final String HTTPD_PATH_DEFAULT = "apachectl";
+	public static final int N_DEFAULT = 2;
+
+	@Property(label = "Period for Git repository polling", intValue = GIT_PERIOD_DEFAULT)
+	public static final String GIT_PERIOD_PROP = "sling.devops.git.period";
+
+	@Property(label = "Period unit for Git repository polling", value = GIT_PERIOD_UNIT_DEFAULT)
+	public static final String GIT_PERIOD_UNIT_PROP = "sling.devops.git.period.unit";
+
+	@Property(label = "Path to the httpd executable", value = HTTPD_PATH_DEFAULT)
+	public static final String HTTPD_PATH_PROP = "sling.devops.httpd";
+
+	@Property(label = "N, the number of Minions running a config must be available before it is transitioned to", intValue = N_DEFAULT)
+	public static final String N_PROP = "sling.devops.orchestrator.n";
+
+	@Reference
+	private SlingSettingsService slingSettingsService;
+
+	private File devopsDirectory;
+	private int n;
+	private InstanceListener instanceListener;
+	private InstanceManager instanceManager;
+	private GitFileMonitor gitFileMonitor;
+	private ConfigTransitioner configTransitioner;
+	private String runningConfig = "";
+	private String targetConfig = "";
+	private ListAppender<ILoggingEvent> logAppender = new ListAppender<>();
+
+	@Activate
+	public void onActivate(final ComponentContext componentContext) throws GitAPIException, IOException, InterruptedException {
+		componentContext.getBundleContext().registerService(Appender.class.getName(), this.logAppender, APPENDER_PROPERTIES);
+		final Dictionary<?, ?> properties = componentContext.getProperties();
+		this.n = PropertiesUtil.toInteger(properties.get(N_PROP), N_DEFAULT);
+		this.instanceManager = new InstanceManager();
+
+		// Create devops directory
+		this.devopsDirectory = new File(this.slingSettingsService.getAbsolutePathWithinSlingHome(DEVOPS_DIR));
+		if (!this.devopsDirectory.exists()) this.devopsDirectory.mkdir();
+
+		// Setup config transitioner
+		this.configTransitioner = new ModProxyConfigTransitioner(
+				PropertiesUtil.toString(properties.get(HTTPD_PATH_PROP), HTTPD_PATH_DEFAULT),
+				PropertiesUtil.toString(properties.get(HTTPD_BALANCER_CONFIG_PATH_PROP), null),
+				PropertiesUtil.toString(properties.get(SUDO_PASSWORD_PROP), null)
+				);
+
+		// Setup instance listener
+		this.instanceListener = new ZooKeeperInstanceListener(
+				PropertiesUtil.toString(properties.get(ZK_CONNECTION_STRING_PROP), null)) {
+
+			@Override
+			public void onInstanceAdded(Instance instance) {
+				DefaultOrchestrator.this.instanceManager.addInstance(instance);
+				DefaultOrchestrator.this.tryTransition(instance.getConfig());
+			}
+
+			@Override
+			public void onInstanceChanged(Instance instance) {
+				this.onInstanceRemoved(instance.getId());
+				this.onInstanceAdded(instance);
+			}
+
+			@Override
+			public void onInstanceRemoved(String slingId) {
+				DefaultOrchestrator.this.instanceManager.removeInstance(slingId);
+			}
+		};
+
+		// Setup Git monitor
+		final String gitRepoPath = PropertiesUtil.toString(properties.get(GIT_REPO_PATH_PROP), null);
+		final String gitRepoFilePath = PropertiesUtil.toString(properties.get(GIT_REPO_FILE_PATH_PROP), null);
+		final int gitRepoPeriod = PropertiesUtil.toInteger(properties.get(GIT_PERIOD_PROP), GIT_PERIOD_DEFAULT);
+		final TimeUnit gitRepoTimeUnit = TimeUnit.valueOf(
+				PropertiesUtil.toString(properties.get(GIT_PERIOD_UNIT_PROP), GIT_PERIOD_UNIT_DEFAULT));
+		if (gitRepoPath.contains("://")) { // assume remote
+			this.gitFileMonitor = new RemoteGitFileMonitor(
+					gitRepoPath,
+					this.slingSettingsService.getAbsolutePathWithinSlingHome(GIT_WORKING_COPY_DIR),
+					gitRepoFilePath,
+					gitRepoPeriod,
+					gitRepoTimeUnit
+					);
+		} else {
+			this.gitFileMonitor = new LocalGitFileMonitor(
+					gitRepoPath,
+					gitRepoFilePath,
+					gitRepoPeriod,
+					gitRepoTimeUnit
+					);
+		}
+		this.gitFileMonitor.addListener(new GitFileMonitor.GitFileListener() {
+			@Override
+			public synchronized void onModified(long time, ByteBuffer content) {
+				final String config = "C" + time / 1000;
+				if (!DefaultOrchestrator.this.isConfigOutdated(config)) {
+					DefaultOrchestrator.this.targetConfig = config;
+					if (!DefaultOrchestrator.this.tryTransition(config)) {
+						final File configFile = new File(DefaultOrchestrator.this.devopsDirectory, config + ".crank.txt");
+						try (final FileChannel fileChannel = new FileOutputStream(configFile, false).getChannel()) {
+							fileChannel.write(content);
+							DefaultOrchestrator.this.startMinions(
+									config,
+									configFile.getAbsolutePath(),
+									DefaultOrchestrator.this.n - DefaultOrchestrator.this.instanceManager.getEndpoints(config).size()
+									);
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							logger.error("Could not write crank.txt file.", e);
+						}
+					}
+				}
+			}
+		});
+		this.gitFileMonitor.start();
+	}
+
+	@Deactivate
+	public void onDeactivate() throws Exception {
+		this.gitFileMonitor.close();
+		this.instanceListener.close();
+	}
+
+	@Override
+	public int getN() {
+		return this.n;
+	}
+
+	@Override
+	public String getRunningConfig() {
+		return this.runningConfig;
+	}
+
+	@Override
+	public String getTargetConfig() {
+		return this.targetConfig;
+	}
+
+	@Override
+	public Map<String, Set<String>> getConfigs() {
+		return this.instanceManager.getConfigs();
+	}
+
+	@Override
+	public List<String> getLog() {
+		final List<String> list = new LinkedList<>();
+		for (final ILoggingEvent e : logAppender.list) list.add(String.format(
+				"%s *%s* %s",
+				APPENDER_DATE_FORMAT.format(new Date(e.getTimeStamp())),
+				e.getLevel(),
+				e.getFormattedMessage()
+				));
+		return list;
+	}
+
+	/**
+	 * Crankstarts new minions.
+	 *
+	 * @param config config value to set on the minions
+	 * @param crankFilePath path to the crank.txt file to crankstart the minions from
+	 * @param num number of minions to crankstart
+	 */
+	private synchronized void startMinions(final String config, final String crankFilePath, final int num) {
+		// TODO
+		logger.info("CRANKSTART {} MINIONS WITH config={} FROM {}.",
+				num,
+				config,
+				crankFilePath
+				);
+	}
+
+	/**
+	 * Stops minions running a specific config.
+	 *
+	 * @param config config to stop
+	 */
+	private synchronized void stopMinions(final String config) {
+		if (!this.instanceManager.getEndpoints(config).isEmpty()) {
+			// TODO
+			logger.info("STOP MINIONS WITH config={}: {}",
+					config,
+					this.instanceManager.getEndpoints(config)
+					);
+		}
+	}
+
+	/**
+	 * Tries to transition to the specified config and returns whether the
+	 * transition succeeded.
+	 *
+	 * A transition is considered successful if (i) the specified config
+	 * is outdated, or (ii) the specified config is current (not outdated)
+	 * and is satisfied. In the latter case, the minions running the config
+	 * prior to the transition are afterwards stopped.
+	 *
+	 * @param newConfig config to try to transition to
+	 * @return true if the transition occurred or the config is outdated, false otherwise
+	 */
+	private synchronized boolean tryTransition(String newConfig) {
+		if (this.isConfigOutdated(newConfig)) return true;
+		else if (this.isConfigSatisfied(newConfig)) {
+			logger.info("Config {} satisfied, transitioning.", newConfig);
+			try {
+				this.configTransitioner.transition(
+						newConfig,
+						this.instanceManager.getEndpoints(newConfig)
+						);
+				if (!newConfig.equals(this.runningConfig)) this.stopMinions(this.runningConfig);
+				this.runningConfig = newConfig;
+				return true;
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				logger.error("Transition failed.", e);
+			}
+		}
+		return false;
+	}
+
+	private boolean isConfigOutdated(String newConfig) {
+		return newConfig.compareTo(this.targetConfig) < 0;
+	}
+
+	private boolean isConfigSatisfied(String newConfig) {
+		return newConfig.equals(this.targetConfig)
+				&& this.instanceManager.getEndpoints(newConfig).size() >= this.n;
+	}
+}

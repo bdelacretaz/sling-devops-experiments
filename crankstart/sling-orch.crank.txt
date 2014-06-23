@@ -42,7 +42,7 @@ start.framework
 bundle mvn:org.apache.felix/org.apache.felix.configadmin/1.6.0
 start.all.bundles
 
-config org.apache.sling.devops.orchestrator.Orchestrator
+config org.apache.sling.devops.orchestrator.DefaultOrchestrator
 	sling.devops.git.repo = ${git_repo}
 	sling.devops.git.file = ${git_file}
 	sling.devops.git.period = ${git_period}

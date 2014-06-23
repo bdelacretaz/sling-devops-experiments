@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="refresh" content="5">
+<title>Orchestrator Status</title>
+<style type="text/css">
+body {
+	font-family: Arial, Helvetica, sans-serif;
+}
+p {
+	margin: 12px 0;
+}
+#configs {
+	height: 200px;
+	overflow: scroll;
+	padding: 0 5px;
+}
+#configsTable {
+	border-collapse: collapse;
+}
+#configsTable th, #configs td {
+	padding: 4px;
+	border: 1px solid #ccc;
+}
+#configsTable th {
+	border-bottom: 2px solid #999;
+	background: #ddd;
+}
+#configsTable ul {
+	margin: 0;
+	padding-left: 28px;
+}
+.running {
+	background: #ffc;
+}
+.target {
+	outline: 2px solid red;
+}
+.box {
+	width: 12px;
+	height: 12px;
+	border: 1px solid #ccc;
+	margin-right: 8px;
+	display: inline-block;
+}
+#log {
+	padding: 4px;
+	border: 1px dashed #ccc;
+	background: #eee;
+}
+#log p {
+	font-family: "Courier New", Courier, monospace;
+	font-size: 12px;
+	margin: 6px 0;
+}
+</style>
+</head>
+<body>
+<%
+	var orch = sling.getService(Packages.org.apache.sling.devops.orchestrator.Orchestrator);
+	var configs = new java.util.TreeMap(orch.getConfigs());
+	var runningConfig = orch.getRunningConfig();
+	var targetConfig = orch.getTargetConfig();
+%>
+<h1>Orchestrator Status Page</h1>
+<div id="configs">
+	<table id="configsTable">
+		<tr>
+			<th>Config</th>
+			<th>Endpoints (n = <%= orch.getN() %>)</th>
+		</tr>
+<%
+	var importantConfigs = [ runningConfig, targetConfig ];
+	for (var i = 0; i < importantConfigs.length; i++) {
+		if (!importantConfigs[i].isEmpty() && !configs.containsKey(importantConfigs[i])) {
+			configs.put(importantConfigs[i], new java.util.HashSet());
+		}
+	}
+	for (var it = configs.entrySet().iterator(); it.hasNext(); ) {
+		var config = it.next();
+		var configClass = "";
+		if (config.getKey().equals(runningConfig)) configClass += " running";
+		if (config.getKey().equals(targetConfig)) configClass += " target";
+%>
+		<tr class="<%= configClass %>">
+			<td><%= config.getKey() %></td>
+			<td>
+				<ul>
+<%
+		for (var eit = config.getValue().iterator(); eit.hasNext(); ) {
+			var endpoint = eit.next();
+%>
+					<li><a href="<%= endpoint %>"><%= endpoint %></a></li>
+<%
+		}
+%>
+				</ul>
+			</td>
+		</tr>
+<%
+	}
+%>
+	</table>
+	<p><span class="box running"></span> Running config</p>
+	<p><span class="box target"></span> Target config</p>
+</div>
+<h2>Log</h2>
+<div id="log">
+<%
+	for (var it = orch.getLog().iterator(); it.hasNext(); ) {
+%>
+	<p><%= it.next() %></p>
+<%
+	}
+%>
+</div>
+</body>
+</html>
