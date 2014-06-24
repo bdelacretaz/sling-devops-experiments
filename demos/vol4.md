@@ -1,5 +1,6 @@
 Sling DevOps Experiments Demo
 =============================
+**[Demo video](http://youtu.be/RVwKUxPSlwY)**
 
 This is the demonstration of Volume 4 of a series of experiments about how [Apache Sling](http://sling.apache.org/) can be made more DevOps-friendly.
 
