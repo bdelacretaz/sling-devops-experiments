@@ -23,6 +23,7 @@ import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.Service;
 import org.apache.sling.commons.osgi.PropertiesUtil;
 import org.apache.sling.devops.Instance;
+import org.apache.sling.devops.MinionsController;
 import org.apache.sling.devops.orchestrator.git.GitFileMonitor;
 import org.apache.sling.devops.orchestrator.git.LocalGitFileMonitor;
 import org.apache.sling.devops.orchestrator.git.RemoteGitFileMonitor;
@@ -88,6 +89,9 @@ public class DefaultOrchestrator implements Orchestrator {
 
 	@Reference
 	private SlingSettingsService slingSettingsService;
+	
+	@Reference
+	private MinionsController minionsController;
 
 	private File devopsDirectory;
 	private int n;
@@ -171,13 +175,12 @@ public class DefaultOrchestrator implements Orchestrator {
 						final File configFile = new File(DefaultOrchestrator.this.devopsDirectory, config + ".crank.txt");
 						try (final FileChannel fileChannel = new FileOutputStream(configFile, false).getChannel()) {
 							fileChannel.write(content);
-							DefaultOrchestrator.this.startMinions(
+							minionsController.startMinions(
 									config,
 									configFile.getAbsolutePath(),
 									DefaultOrchestrator.this.n - DefaultOrchestrator.this.instanceManager.getEndpoints(config).size()
 									);
 						} catch (IOException e) {
-							// TODO Auto-generated catch block
 							logger.error("Could not write crank.txt file.", e);
 						}
 					}
@@ -226,37 +229,6 @@ public class DefaultOrchestrator implements Orchestrator {
 	}
 
 	/**
-	 * Crankstarts new minions.
-	 *
-	 * @param config config value to set on the minions
-	 * @param crankFilePath path to the crank.txt file to crankstart the minions from
-	 * @param num number of minions to crankstart
-	 */
-	private synchronized void startMinions(final String config, final String crankFilePath, final int num) {
-		// TODO
-		logger.info("CRANKSTART {} MINIONS WITH config={} FROM {}.",
-				num,
-				config,
-				crankFilePath
-				);
-	}
-
-	/**
-	 * Stops minions running a specific config.
-	 *
-	 * @param config config to stop
-	 */
-	private synchronized void stopMinions(final String config) {
-		if (!this.instanceManager.getEndpoints(config).isEmpty()) {
-			// TODO
-			logger.info("STOP MINIONS WITH config={}: {}",
-					config,
-					this.instanceManager.getEndpoints(config)
-					);
-		}
-	}
-
-	/**
 	 * Tries to transition to the specified config and returns whether the
 	 * transition succeeded.
 	 *
@@ -277,7 +249,9 @@ public class DefaultOrchestrator implements Orchestrator {
 						newConfig,
 						this.instanceManager.getEndpoints(newConfig)
 						);
-				if (!newConfig.equals(this.runningConfig)) this.stopMinions(this.runningConfig);
+				if (!newConfig.equals(this.runningConfig) && !this.instanceManager.getEndpoints(this.runningConfig).isEmpty()) {
+				    minionsController.stopMinions(this.runningConfig, this.instanceManager.getEndpoints(this.runningConfig));
+				}
 				this.runningConfig = newConfig;
 				return true;
 			} catch (Exception e) {

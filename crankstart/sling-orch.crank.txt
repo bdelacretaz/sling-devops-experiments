@@ -110,6 +110,8 @@ bundle mvn:org.apache.sling/org.apache.sling.scripting.core/2.0.26
 bundle mvn:org.apache.sling/org.apache.sling.scripting.javascript/2.0.12
 bundle mvn:org.apache.sling/org.apache.sling.scripting.jsp/2.0.28
 bundle mvn:org.apache.sling/org.apache.sling.scripting.jsp.taglib/2.2.0
+bundle mvn:org.apache.sling/org.apache.sling.hc.core/1.1.0
+bundle mvn:org.apache.sling/org.apache.sling.junit.core/1.0.8
 bundle mvn:org.apache.geronimo.bundles/jstl/1.2_1
 bundle mvn:org.codehaus.groovy/groovy-all/1.8.2
 bundle mvn:org.apache.felix/org.apache.felix.http.whiteboard/2.2.0
@@ -186,8 +188,9 @@ bundle mvn:org.apache.sling/org.apache.sling.jcr.jackrabbit.server/2.1.3-SNAPSHO
 bundle mvn:org.apache.zookeeper/zookeeper/3.3.6
 bundle mvn:org.apache.sling/org.apache.sling.devops.common/0.0.1-SNAPSHOT
 
-# DevOps Orchestrator bundles
+# DevOps bundles
 bundle mvn:org.apache.sling/org.apache.sling.devops.orchestrator/0.0.1-SNAPSHOT
+bundle mvn:org.apache.sling/org.apache.sling.devops.minion/0.0.1-SNAPSHOT
 
 # Now start bundles
 start.all.bundles
