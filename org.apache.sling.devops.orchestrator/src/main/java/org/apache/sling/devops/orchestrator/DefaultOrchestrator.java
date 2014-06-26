@@ -43,7 +43,7 @@ public class DefaultOrchestrator implements Orchestrator {
 	private static final Logger logger = LoggerFactory.getLogger(DefaultOrchestrator.class);
 	private static final Dictionary<String, Object> APPENDER_PROPERTIES = new Hashtable<>();
 	static {
-		APPENDER_PROPERTIES.put("loggers", new String[]{ DefaultOrchestrator.class.getName() });
+		APPENDER_PROPERTIES.put("loggers", new String[]{ ManualMinionsController.class.getName() });
 	}
 	private static final SimpleDateFormat APPENDER_DATE_FORMAT = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss.SSS");
 
