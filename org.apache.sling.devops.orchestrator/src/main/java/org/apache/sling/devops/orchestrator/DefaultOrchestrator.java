@@ -94,7 +94,7 @@ public class DefaultOrchestrator implements Orchestrator {
 
 	private File devopsDirectory;
 	private int n;
-	private InstanceListener instanceListener;
+	private InstanceMonitor instanceMonitor;
 	private InstanceManager instanceManager;
 	private GitFileMonitor gitFileMonitor;
 	private ConfigTransitioner configTransitioner;
@@ -121,8 +121,8 @@ public class DefaultOrchestrator implements Orchestrator {
 				);
 
 		// Setup instance listener
-		this.instanceListener = new ZooKeeperInstanceListener(
-				PropertiesUtil.toString(properties.get(ZK_CONNECTION_STRING_PROP), null)) {
+		this.instanceMonitor = new ZooKeeperInstanceMonitor(PropertiesUtil.toString(properties.get(ZK_CONNECTION_STRING_PROP), null));
+		this.instanceMonitor.addInstanceListener(new InstanceMonitor.InstanceListener() {
 
 			@Override
 			public void onInstanceAdded(Instance instance) {
@@ -140,7 +140,7 @@ public class DefaultOrchestrator implements Orchestrator {
 			public void onInstanceRemoved(String slingId) {
 				DefaultOrchestrator.this.instanceManager.removeInstance(slingId);
 			}
-		};
+		});
 
 		// Setup Git monitor
 		final String gitRepoPath = PropertiesUtil.toString(properties.get(GIT_REPO_PATH_PROP), null);
@@ -192,7 +192,7 @@ public class DefaultOrchestrator implements Orchestrator {
 	@Deactivate
 	public void onDeactivate() throws Exception {
 		this.gitFileMonitor.close();
-		this.instanceListener.close();
+		this.instanceMonitor.close();
 	}
 
 	@Override

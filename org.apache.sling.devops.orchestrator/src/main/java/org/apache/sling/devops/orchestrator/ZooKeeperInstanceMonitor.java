@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -12,22 +13,24 @@ import java.util.Set;
 import org.apache.sling.devops.Instance;
 import org.apache.sling.devops.zookeeper.ZooKeeperConnector;
 import org.apache.zookeeper.AsyncCallback;
+import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class ZooKeeperInstanceListener implements InstanceListener {
+public class ZooKeeperInstanceMonitor implements InstanceMonitor {
 
-	private static final Logger logger = LoggerFactory.getLogger(ZooKeeperInstanceListener.class);
+	private static final Logger logger = LoggerFactory.getLogger(ZooKeeperInstanceMonitor.class);
 
+	private List<InstanceListener> listeners;
 	private ZooKeeperConnector zkConnector;
 	private final Map<String, Instance> currentInstances = new HashMap<>();
 	private int currentVersion = -1;
 
-	public ZooKeeperInstanceListener(String connectionString) throws IOException {
+	public ZooKeeperInstanceMonitor(String connectionString) throws IOException {
+		this.listeners = new LinkedList<>();
 		this.zkConnector = new ZooKeeperConnector(connectionString, new Watcher() {
 			@Override
 			public void process(WatchedEvent event) {
@@ -41,16 +44,21 @@ public abstract class ZooKeeperInstanceListener implements InstanceListener {
 					// and recreate its node.
 
 					logger.info("Children changed, updating instances.");
-					ZooKeeperInstanceListener.this.updateInstances();
+					ZooKeeperInstanceMonitor.this.updateInstances();
 				} else if (event.getType() != Event.EventType.None) {
 					// our root node changed, shouldn't happen
 					logger.warn("Node was changed, closing ZooKeeper connection.");
 					logger.warn(event.toString() + " " + event.getType());
-					ZooKeeperInstanceListener.this.zkConnector.close();
+					ZooKeeperInstanceMonitor.this.zkConnector.close();
 				}
 			}
 		});
 		this.updateInstances();
+	}
+
+	@Override
+	public void addInstanceListener(final InstanceListener listener) {
+		this.listeners.add(listener);
 	}
 
 	@Override
@@ -83,7 +91,7 @@ public abstract class ZooKeeperInstanceListener implements InstanceListener {
 						final int version = stat.getCversion(); // children version
 						if (numChildren > 0) {
 							for (final String child : children) { // retrieve data of each child
-								ZooKeeperInstanceListener.this.zkConnector.getZooKeeper().getData(
+								ZooKeeperInstanceMonitor.this.zkConnector.getZooKeeper().getData(
 										"/" + child,
 										false, // do not watch the children!
 										new AsyncCallback.DataCallback() {
@@ -102,7 +110,7 @@ public abstract class ZooKeeperInstanceListener implements InstanceListener {
 
 													// instance info for this version of children is ready? update
 													if (instances.size() == numChildren) {
-														ZooKeeperInstanceListener.this.updateInstances(instances, version);
+														ZooKeeperInstanceMonitor.this.updateInstances(instances, version);
 													}
 												}
 											}
@@ -110,7 +118,7 @@ public abstract class ZooKeeperInstanceListener implements InstanceListener {
 										null
 										);
 							}
-						} else ZooKeeperInstanceListener.this.updateInstances(instances, version);
+						} else ZooKeeperInstanceMonitor.this.updateInstances(instances, version);
 					}
 				},
 				null
@@ -134,11 +142,15 @@ public abstract class ZooKeeperInstanceListener implements InstanceListener {
 				newIds.add(id);
 				if (!this.currentInstances.containsKey(id)) {
 					this.currentInstances.put(id, instance);
-					this.onInstanceAdded(instance);
+					for (final InstanceListener listener : this.listeners) {
+						listener.onInstanceAdded(instance);
+					}
 				} else {
 					if (!instance.equals(this.currentInstances.get(id))) {
 						this.currentInstances.put(id, instance);
-						this.onInstanceChanged(instance);
+						for (final InstanceListener listener : this.listeners) {
+							listener.onInstanceChanged(instance);
+						}
 					}
 				}
 			}
@@ -148,7 +160,9 @@ public abstract class ZooKeeperInstanceListener implements InstanceListener {
 				String id = it.next().getKey();
 				if (!newIds.contains(id)) {
 					it.remove();
-					this.onInstanceRemoved(id);
+					for (final InstanceListener listener : this.listeners) {
+						listener.onInstanceRemoved(id);
+					}
 				}
 			}
 			logger.info(
