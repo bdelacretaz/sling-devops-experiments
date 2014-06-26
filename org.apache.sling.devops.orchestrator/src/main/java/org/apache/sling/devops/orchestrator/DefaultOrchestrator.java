@@ -23,7 +23,6 @@ import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.Service;
 import org.apache.sling.commons.osgi.PropertiesUtil;
 import org.apache.sling.devops.Instance;
-import org.apache.sling.devops.MinionsController;
 import org.apache.sling.devops.orchestrator.git.GitFileMonitor;
 import org.apache.sling.devops.orchestrator.git.LocalGitFileMonitor;
 import org.apache.sling.devops.orchestrator.git.RemoteGitFileMonitor;

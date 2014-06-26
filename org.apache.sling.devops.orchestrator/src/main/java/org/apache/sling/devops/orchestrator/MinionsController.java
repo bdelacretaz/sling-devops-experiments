@@ -1,4 +1,4 @@
-package org.apache.sling.devops;
+package org.apache.sling.devops.orchestrator;
 
 import java.util.Set;
 

@@ -1,10 +1,9 @@
-package org.apache.sling.devops.minion;
+package org.apache.sling.devops.orchestrator;
 
 import java.util.Set;
 
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Service;
-import org.apache.sling.devops.MinionsController;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
