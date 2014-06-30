@@ -249,7 +249,7 @@ public class DefaultOrchestrator implements Orchestrator {
 						this.instanceManager.getEndpoints(newConfig)
 						);
 				if (!newConfig.equals(this.runningConfig) && !this.instanceManager.getEndpoints(this.runningConfig).isEmpty()) {
-				    minionsController.stopMinions(this.runningConfig, this.instanceManager.getEndpoints(this.runningConfig));
+					minionsController.stopMinions(this.runningConfig, this.instanceManager.getEndpoints(this.runningConfig));
 				}
 				this.runningConfig = newConfig;
 				return true;

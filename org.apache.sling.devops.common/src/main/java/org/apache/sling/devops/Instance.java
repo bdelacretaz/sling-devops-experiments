@@ -24,7 +24,7 @@ public class Instance {
 	
 	@Override
 	public String toString() {
-	    return getClass().getSimpleName() + " (" + this.config + ") " + this.endpoints;
+		return getClass().getSimpleName() + " (" + this.config + ") " + this.endpoints;
 	}
 
 	public String getId() {
