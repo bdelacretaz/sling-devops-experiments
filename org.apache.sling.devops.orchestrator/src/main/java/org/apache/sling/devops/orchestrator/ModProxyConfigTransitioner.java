@@ -54,8 +54,8 @@ public class ModProxyConfigTransitioner implements ConfigTransitioner {
 		}
 
 		// Read streams so that process does not block
-		final List<String> output = readStream(process.getInputStream());
-		final List<String> errors = readStream(process.getErrorStream());
+		final List<String> output = Utils.readStream(process.getInputStream());
+		final List<String> errors = Utils.readStream(process.getErrorStream());
 
 		final int exitValue = process.waitFor();
 
@@ -70,13 +70,5 @@ public class ModProxyConfigTransitioner implements ConfigTransitioner {
 			for (final String error : errors) logger.warn(error);
 			logger.info("Proxy command \"{}\" succeeded.", command);
 		}
-	}
-
-	private static List<String> readStream(InputStream stream) {
-		final List<String> lines = new LinkedList<>();
-		try (Scanner streamScanner = new Scanner(stream)) {
-			while (streamScanner.hasNextLine()) lines.add(streamScanner.nextLine());
-		}
-		return lines;
 	}
 }

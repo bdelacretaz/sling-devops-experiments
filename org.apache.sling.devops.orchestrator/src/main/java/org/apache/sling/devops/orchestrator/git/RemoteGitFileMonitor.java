@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.sling.devops.orchestrator.Utils;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 
@@ -29,18 +30,7 @@ public class RemoteGitFileMonitor extends GitFileMonitor {
 	@Override
 	public synchronized void close() {
 		super.close();
-		delete(this.getLocalRepoPath());
-	}
-
-	private static void delete(final String path) {
-		delete(new File(path));
-	}
-
-	private static void delete(final File path) {
-		if (path.isDirectory()) {
-			for (final File file : path.listFiles()) delete(file);
-		}
-		path.delete();
+		Utils.delete(this.getLocalRepoPath());
 	}
 
 	public static void main(String[] args) throws GitAPIException, IOException {
