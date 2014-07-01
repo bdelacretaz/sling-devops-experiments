@@ -22,12 +22,14 @@ import org.apache.felix.scr.annotations.Property;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.Service;
 import org.apache.sling.commons.osgi.PropertiesUtil;
+import org.apache.sling.crankstart.api.CrankstartConstants;
 import org.apache.sling.devops.Instance;
 import org.apache.sling.devops.orchestrator.git.GitFileMonitor;
 import org.apache.sling.devops.orchestrator.git.LocalGitFileMonitor;
 import org.apache.sling.devops.orchestrator.git.RemoteGitFileMonitor;
 import org.apache.sling.settings.SlingSettingsService;
 import org.eclipse.jgit.api.errors.GitAPIException;
+import org.osgi.framework.BundleContext;
 import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -102,7 +104,8 @@ public class DefaultOrchestrator implements Orchestrator {
 
 	@Activate
 	public void onActivate(final ComponentContext componentContext) throws GitAPIException, IOException, InterruptedException {
-		componentContext.getBundleContext().registerService(Appender.class.getName(), this.logAppender, APPENDER_PROPERTIES);
+		final BundleContext bundleContext = componentContext.getBundleContext();
+		bundleContext.registerService(Appender.class.getName(), this.logAppender, APPENDER_PROPERTIES);
 		final Dictionary<?, ?> properties = componentContext.getProperties();
 		this.n = PropertiesUtil.toInteger(properties.get(N_PROP), N_DEFAULT);
 		this.instanceManager = new InstanceManager();
@@ -111,7 +114,9 @@ public class DefaultOrchestrator implements Orchestrator {
 		this.devopsDirectory = new File(this.slingSettingsService.getAbsolutePathWithinSlingHome(DEVOPS_DIR));
 		if (!this.devopsDirectory.exists()) this.devopsDirectory.mkdir();
 
-		this.minionsController = new ManualMinionsController();
+		final String crankstartJar = bundleContext.getProperty(CrankstartConstants.CRANKSTART_JAR_PATH);
+		if (crankstartJar != null) this.minionsController = new CrankstartMinionsController(crankstartJar);
+		else this.minionsController = new ManualMinionsController();
 
 		// Setup config transitioner
 		this.configTransitioner = new ModProxyConfigTransitioner(
@@ -244,10 +249,12 @@ public class DefaultOrchestrator implements Orchestrator {
 	 * @param newConfig config to try to transition to
 	 * @return true if the transition occurred or the config is outdated, false otherwise
 	 */
-	private synchronized boolean tryTransition(String newConfig) {
-		if (this.isConfigOutdated(newConfig)) return true;
-		else if (this.isConfigSatisfied(newConfig)) {
-			logger.info("Config {} satisfied, transitioning.", newConfig);
+	private synchronized boolean tryTransition(final String newConfig) {
+		if (this.isConfigOutdated(newConfig)) {
+			logger.info("Config {} is outdated, ignored.", newConfig);
+			return true;
+		} else if (this.isConfigSatisfied(newConfig)) {
+			logger.info("Config {} satisfied, transitioning...", newConfig);
 			try {
 				this.configTransitioner.transition(
 						newConfig,
@@ -270,12 +277,12 @@ public class DefaultOrchestrator implements Orchestrator {
 		return false;
 	}
 
-	private boolean isConfigOutdated(String newConfig) {
-		return newConfig.compareTo(this.targetConfig) < 0;
+	private boolean isConfigOutdated(final String newConfig) {
+		return newConfig.compareTo(this.getTargetConfig()) < 0;
 	}
 
-	private boolean isConfigSatisfied(String newConfig) {
-		return newConfig.equals(this.targetConfig)
+	private boolean isConfigSatisfied(final String newConfig) {
+		return newConfig.equals(this.getTargetConfig())
 				&& this.instanceManager.getEndpoints(newConfig).size() >= this.n;
 	}
 }

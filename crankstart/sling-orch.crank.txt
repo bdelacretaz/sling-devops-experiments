@@ -187,6 +187,7 @@ bundle mvn:org.apache.zookeeper/zookeeper/3.3.6
 bundle mvn:org.apache.sling/org.apache.sling.devops.common/0.0.1-SNAPSHOT
 
 # DevOps Orchestrator bundles
+bundle mvn:org.apache.commons/commons-exec/1.2
 bundle mvn:org.apache.sling/org.apache.sling.devops.orchestrator/0.0.1-SNAPSHOT
 
 # Now start bundles

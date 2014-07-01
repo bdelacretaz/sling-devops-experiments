@@ -1,12 +1,8 @@
-# Start a full Sling instance with the Sling crankstart launcher
-# TODO: not all integration tests pass, we might be missing some
-# bundles or properties that the Sling launchpad provides
-
 # Set default values for our variables
 # Must set these three on command line
 # defaults port 1234
 # defaults config C1
-# defaults instance 1
+defaults sling_home sling-${config}-${port}-crankstart
 defaults zk_conn_string localhost:2181
 defaults mongo_uri mongodb://localhost:27017
 defaults mongo_db oakblahblah
@@ -25,8 +21,8 @@ classpath mvn:org.apache.sling/org.apache.sling.crankstart.api/0.0.1-SNAPSHOT
 
 # Set OSGi framework properties
 osgi.property org.osgi.service.http.port ${port}
-osgi.property sling.home sling-${config}-${instance}-crankstart
-osgi.property org.osgi.framework.storage sling-${config}-${instance}-crankstart/osgi.framework.storage
+osgi.property sling.home ${sling_home}
+osgi.property org.osgi.framework.storage ${sling_home}/osgi.framework.storage
 osgi.property org.apache.sling.commons.log.level INFO
 osgi.property org.apache.sling.commons.log.file logs/error.log
 osgi.property org.apache.sling.commons.log.file.number 5
