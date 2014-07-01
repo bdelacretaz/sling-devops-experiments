@@ -1,23 +1,17 @@
 package org.apache.sling.devops.orchestrator;
 
-import java.util.Set;
-
-import org.apache.felix.scr.annotations.Component;
-import org.apache.felix.scr.annotations.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Default MinionsController that just asks the user to start/stop minions.
  */
-@Component
-@Service
 public class ManualMinionsController implements MinionsController {
 
-	private final Logger logger = LoggerFactory.getLogger(getClass());
+	private static final Logger logger = LoggerFactory.getLogger(ManualMinionsController.class);
 
 	@Override
-	public void startMinions(String config, String crankFilePath, int num) {
+	public void startMinions(final String config, final String crankFilePath, final int num) {
 		logger.info("PLEASE CRANKSTART {} MINIONS WITH config={} FROM {}.",
 				num,
 				config,
@@ -26,10 +20,12 @@ public class ManualMinionsController implements MinionsController {
 	}
 
 	@Override
-	public void stopMinions(String config, Set<String> endPoints) {
-		logger.info("PLEASE STOP MINIONS HAVING config={}: {}",
-				config,
-				endPoints
-				);
+	public void stopMinions(final String config) {
+		logger.info("PLEASE STOP MINIONS HAVING config={}", config);
+	}
+
+	@Override
+	public void close() {
+		// TODO Auto-generated method stub
 	}
 }

@@ -88,15 +88,13 @@ public class DefaultOrchestrator implements Orchestrator {
 
 	@Reference
 	private SlingSettingsService slingSettingsService;
-	
-	@Reference
-	private MinionsController minionsController;
 
 	private File devopsDirectory;
 	private int n;
 	private InstanceMonitor instanceMonitor;
 	private InstanceManager instanceManager;
 	private GitFileMonitor gitFileMonitor;
+	private MinionsController minionsController;
 	private ConfigTransitioner configTransitioner;
 	private String runningConfig = "";
 	private String targetConfig = "";
@@ -112,6 +110,8 @@ public class DefaultOrchestrator implements Orchestrator {
 		// Create devops directory
 		this.devopsDirectory = new File(this.slingSettingsService.getAbsolutePathWithinSlingHome(DEVOPS_DIR));
 		if (!this.devopsDirectory.exists()) this.devopsDirectory.mkdir();
+
+		this.minionsController = new ManualMinionsController();
 
 		// Setup config transitioner
 		this.configTransitioner = new ModProxyConfigTransitioner(
@@ -174,13 +174,17 @@ public class DefaultOrchestrator implements Orchestrator {
 						final File configFile = new File(DefaultOrchestrator.this.devopsDirectory, config + ".crank.txt");
 						try (final FileChannel fileChannel = new FileOutputStream(configFile, false).getChannel()) {
 							fileChannel.write(content);
-							minionsController.startMinions(
+						} catch (IOException e) {
+							logger.error("Could not write crank.txt file.", e);
+						}
+						try {
+							DefaultOrchestrator.this.minionsController.startMinions(
 									config,
 									configFile.getAbsolutePath(),
 									DefaultOrchestrator.this.n - DefaultOrchestrator.this.instanceManager.getEndpoints(config).size()
 									);
-						} catch (IOException e) {
-							logger.error("Could not write crank.txt file.", e);
+						} catch (Exception e) {
+							logger.error("Could not start Minions.", e);
 						}
 					}
 				}
@@ -191,6 +195,7 @@ public class DefaultOrchestrator implements Orchestrator {
 
 	@Deactivate
 	public void onDeactivate() throws Exception {
+		this.minionsController.close();
 		this.gitFileMonitor.close();
 		this.instanceMonitor.close();
 	}
@@ -248,8 +253,12 @@ public class DefaultOrchestrator implements Orchestrator {
 						newConfig,
 						this.instanceManager.getEndpoints(newConfig)
 						);
-				if (!newConfig.equals(this.runningConfig) && !this.instanceManager.getEndpoints(this.runningConfig).isEmpty()) {
-					minionsController.stopMinions(this.runningConfig, this.instanceManager.getEndpoints(this.runningConfig));
+				if (!newConfig.equals(this.getRunningConfig()) && !this.instanceManager.getEndpoints(this.getRunningConfig()).isEmpty()) {
+					try {
+						this.minionsController.stopMinions(this.getRunningConfig());
+					} catch (Exception e) {
+						logger.error("Could not stop Minions.", e);
+					}
 				}
 				this.runningConfig = newConfig;
 				return true;
