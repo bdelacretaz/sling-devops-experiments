@@ -200,6 +200,7 @@ public class DefaultOrchestrator implements Orchestrator {
 
 	@Deactivate
 	public void onDeactivate() throws Exception {
+		this.configTransitioner.close();
 		this.minionsController.close();
 		this.gitFileMonitor.close();
 		this.instanceMonitor.close();
