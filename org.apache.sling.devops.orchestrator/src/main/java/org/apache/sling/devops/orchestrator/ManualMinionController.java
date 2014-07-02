@@ -6,9 +6,9 @@ import org.slf4j.LoggerFactory;
 /**
  * Default MinionsController that just asks the user to start/stop minions.
  */
-public class ManualMinionsController implements MinionsController {
+public class ManualMinionController implements MinionController {
 
-	private static final Logger logger = LoggerFactory.getLogger(ManualMinionsController.class);
+	private static final Logger logger = LoggerFactory.getLogger(ManualMinionController.class);
 
 	@Override
 	public void startMinions(final String config, final String crankFilePath, final int num) {

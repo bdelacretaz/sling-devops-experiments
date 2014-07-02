@@ -3,7 +3,7 @@ package org.apache.sling.devops.orchestrator;
 import java.io.Closeable;
 
 /** service that starts and stops minions */
-public interface MinionsController extends Closeable {
+public interface MinionController extends Closeable {
 	/** Start a number of minions with specified config */
 	void startMinions(final String config, final String crankFilePath, final int num) throws Exception;
 

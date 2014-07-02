@@ -45,7 +45,7 @@ public class DefaultOrchestrator implements Orchestrator {
 	private static final Logger logger = LoggerFactory.getLogger(DefaultOrchestrator.class);
 	private static final Dictionary<String, Object> APPENDER_PROPERTIES = new Hashtable<>();
 	static {
-		APPENDER_PROPERTIES.put("loggers", new String[]{ ManualMinionsController.class.getName() });
+		APPENDER_PROPERTIES.put("loggers", new String[]{ ManualMinionController.class.getName() });
 	}
 	private static final SimpleDateFormat APPENDER_DATE_FORMAT = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss.SSS");
 
@@ -96,7 +96,7 @@ public class DefaultOrchestrator implements Orchestrator {
 	private InstanceMonitor instanceMonitor;
 	private InstanceManager instanceManager;
 	private GitFileMonitor gitFileMonitor;
-	private MinionsController minionsController;
+	private MinionController minionsController;
 	private ConfigTransitioner configTransitioner;
 	private String runningConfig = "";
 	private String targetConfig = "";
@@ -115,8 +115,8 @@ public class DefaultOrchestrator implements Orchestrator {
 		if (!this.devopsDirectory.exists()) this.devopsDirectory.mkdir();
 
 		final String crankstartJar = bundleContext.getProperty(CrankstartConstants.CRANKSTART_JAR_PATH);
-		if (crankstartJar != null) this.minionsController = new CrankstartMinionsController(crankstartJar);
-		else this.minionsController = new ManualMinionsController();
+		if (crankstartJar != null) this.minionsController = new CrankstartMinionController(crankstartJar);
+		else this.minionsController = new ManualMinionController();
 
 		// Setup config transitioner
 		this.configTransitioner = new ModProxyConfigTransitioner(

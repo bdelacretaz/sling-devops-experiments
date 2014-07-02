@@ -19,9 +19,9 @@ import org.apache.commons.exec.PumpStreamHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class CrankstartMinionsController implements MinionsController {
+public class CrankstartMinionController implements MinionController {
 
-	private static final Logger logger = LoggerFactory.getLogger(CrankstartMinionsController.class);
+	private static final Logger logger = LoggerFactory.getLogger(CrankstartMinionController.class);
 
 	public static final int PORT_MIN = 1024; // exclude "system ports" 1-1023
 	public static final int PORT_MAX = 65535;
@@ -32,7 +32,7 @@ public class CrankstartMinionsController implements MinionsController {
 	private final Map<Executor, String> instanceHomes;
 	private final Random random;
 
-	public CrankstartMinionsController(final String crankstartJar) {
+	public CrankstartMinionController(final String crankstartJar) {
 		if (!new File(crankstartJar).exists()) {
 			throw new IllegalArgumentException(String.format("%s does not exist.", crankstartJar));
 		}
