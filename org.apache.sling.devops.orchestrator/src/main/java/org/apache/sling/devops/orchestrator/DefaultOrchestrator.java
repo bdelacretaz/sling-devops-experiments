@@ -169,24 +169,21 @@ public class DefaultOrchestrator implements Orchestrator {
 			@Override
 			public synchronized void onModified(long time, ByteBuffer content) {
 				final String config = "C" + time / 1000;
-				if (!DefaultOrchestrator.this.isConfigOutdated(config)) {
-					DefaultOrchestrator.this.targetConfig = config;
-					if (!DefaultOrchestrator.this.tryTransition(config)) {
-						final File configFile = new File(DefaultOrchestrator.this.devopsDirectory, config + ".crank.txt");
-						try (final FileChannel fileChannel = new FileOutputStream(configFile, false).getChannel()) {
-							fileChannel.write(content);
-						} catch (IOException e) {
-							logger.error("Could not write crank.txt file.", e);
-						}
-						try {
-							DefaultOrchestrator.this.minionsController.startMinions(
-									config,
-									configFile.getAbsolutePath(),
-									DefaultOrchestrator.this.n - DefaultOrchestrator.this.instanceManager.getEndpoints(config).size()
-									);
-						} catch (Exception e) {
-							logger.error("Could not start Minions.", e);
-						}
+				if (!DefaultOrchestrator.this.tryTransition(config)) {
+					final File configFile = new File(DefaultOrchestrator.this.devopsDirectory, config + ".crank.txt");
+					try (final FileChannel fileChannel = new FileOutputStream(configFile, false).getChannel()) {
+						fileChannel.write(content);
+					} catch (IOException e) {
+						logger.error("Could not write crank.txt file.", e);
+					}
+					try {
+						DefaultOrchestrator.this.minionsController.startMinions(
+								config,
+								configFile.getAbsolutePath(),
+								DefaultOrchestrator.this.n - DefaultOrchestrator.this.instanceManager.getEndpoints(config).size()
+								);
+					} catch (Exception e) {
+						logger.error("Could not start Minions.", e);
 					}
 				}
 			}
@@ -262,25 +259,28 @@ public class DefaultOrchestrator implements Orchestrator {
 		if (this.isConfigOutdated(newConfig)) {
 			logger.info("Config {} is outdated, ignored.", newConfig);
 			return true;
-		} else if (this.isConfigSatisfied(newConfig)) {
-			logger.info("Config {} satisfied, transitioning...", newConfig);
-			try {
-				this.configTransitioner.transition(
-						newConfig,
-						this.instanceManager.getEndpoints(newConfig)
-						);
-				if (!newConfig.equals(this.getRunningConfig()) && !this.instanceManager.getEndpoints(this.getRunningConfig()).isEmpty()) {
-					try {
-						this.minionsController.stopMinions(this.getRunningConfig());
-					} catch (Exception e) {
-						logger.error("Could not stop Minions.", e);
+		} else {
+			this.targetConfig = newConfig;
+			if (this.isConfigSatisfied(newConfig)) {
+				logger.info("Config {} satisfied, transitioning...", newConfig);
+				try {
+					this.configTransitioner.transition(
+							newConfig,
+							this.instanceManager.getEndpoints(newConfig)
+							);
+					if (!newConfig.equals(this.getRunningConfig()) && !this.instanceManager.getEndpoints(this.getRunningConfig()).isEmpty()) {
+						try {
+							this.minionsController.stopMinions(this.getRunningConfig());
+						} catch (Exception e) {
+							logger.error("Could not stop Minions.", e);
+						}
 					}
+					this.runningConfig = newConfig;
+					return true;
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					logger.error("Transition failed.", e);
 				}
-				this.runningConfig = newConfig;
-				return true;
-			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				logger.error("Transition failed.", e);
 			}
 		}
 		return false;
