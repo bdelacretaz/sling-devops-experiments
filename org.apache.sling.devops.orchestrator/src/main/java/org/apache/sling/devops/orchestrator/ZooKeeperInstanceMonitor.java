@@ -43,7 +43,7 @@ public class ZooKeeperInstanceMonitor implements InstanceMonitor {
 					// Therefore a child wishing to change its data must delete
 					// and recreate its node.
 
-					logger.info("Children changed, updating instances.");
+					logger.debug("Children changed, updating instances.");
 					ZooKeeperInstanceMonitor.this.updateInstances();
 				} else if (event.getType() != Event.EventType.None) {
 					// our root node changed, shouldn't happen
@@ -136,21 +136,21 @@ public class ZooKeeperInstanceMonitor implements InstanceMonitor {
 		if (version > this.currentVersion) {
 			Set<String> newIds = new HashSet<>();
 
+			final List<Instance> added = new LinkedList<>();
+			final List<Instance> changed = new LinkedList<>();
+			final List<String> removed = new LinkedList<>();
+
 			// detect new or changed instances
 			for (Instance instance : instances) {
 				String id = instance.getId();
 				newIds.add(id);
 				if (!this.currentInstances.containsKey(id)) {
 					this.currentInstances.put(id, instance);
-					for (final InstanceListener listener : this.listeners) {
-						listener.onInstanceAdded(instance);
-					}
+					added.add(instance);
 				} else {
 					if (!instance.equals(this.currentInstances.get(id))) {
 						this.currentInstances.put(id, instance);
-						for (final InstanceListener listener : this.listeners) {
-							listener.onInstanceChanged(instance);
-						}
+						changed.add(instance);
 					}
 				}
 			}
@@ -160,16 +160,24 @@ public class ZooKeeperInstanceMonitor implements InstanceMonitor {
 				String id = it.next().getKey();
 				if (!newIds.contains(id)) {
 					it.remove();
-					for (final InstanceListener listener : this.listeners) {
-						listener.onInstanceRemoved(id);
-					}
+					removed.add(id);
 				}
 			}
+
 			logger.info(
 					"Instances updated from version {} to version {}: {}",
-					new Object [] { this.currentVersion, version, this.currentInstances.values() }
+					this.currentVersion,
+					version,
+					this.currentInstances.values()
 					);
 			this.currentVersion = version;
+
+			// notify listeners
+			for (final InstanceListener listener : this.listeners) {
+				for (final Instance instance : added) listener.onInstanceAdded(instance);
+				for (final Instance instance : changed) listener.onInstanceChanged(instance);
+				for (final String id : removed) listener.onInstanceRemoved(id);
+			}
 		}
 	}
 }
