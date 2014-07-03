@@ -43,11 +43,8 @@ import ch.qos.logback.core.read.ListAppender;
 public class DefaultOrchestrator implements Orchestrator {
 
 	private static final Logger logger = LoggerFactory.getLogger(DefaultOrchestrator.class);
-	private static final Dictionary<String, Object> APPENDER_PROPERTIES = new Hashtable<>();
-	static {
-		APPENDER_PROPERTIES.put("loggers", new String[]{ ManualMinionController.class.getName() });
-	}
-	private static final SimpleDateFormat APPENDER_DATE_FORMAT = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss.SSS");
+
+	private static final SimpleDateFormat LOG_APPENDER_DATE_FORMAT = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss.SSS");
 
 	public static final String DEVOPS_DIR = "devops";
 	public static final String GIT_WORKING_COPY_DIR = DEVOPS_DIR + "/repo";
@@ -105,7 +102,6 @@ public class DefaultOrchestrator implements Orchestrator {
 	@Activate
 	public void onActivate(final ComponentContext componentContext) throws GitAPIException, IOException, InterruptedException {
 		final BundleContext bundleContext = componentContext.getBundleContext();
-		bundleContext.registerService(Appender.class.getName(), this.logAppender, APPENDER_PROPERTIES);
 		final Dictionary<?, ?> properties = componentContext.getProperties();
 		this.n = PropertiesUtil.toInteger(properties.get(N_PROP), N_DEFAULT);
 		this.instanceManager = new InstanceManager();
@@ -195,6 +191,17 @@ public class DefaultOrchestrator implements Orchestrator {
 				}
 			}
 		});
+
+		// Configure log appender
+		final Dictionary<String, Object> logAppenderProperties = new Hashtable<>();
+		logAppenderProperties.put("loggers", new String[]{
+				this.getClass().getName(),
+				this.instanceMonitor.getClass().getName(),
+				this.gitFileMonitor.getClass().getSuperclass().getName(),
+				this.minionsController.getClass().getName(),
+				this.configTransitioner.getClass().getName()
+				});
+		bundleContext.registerService(Appender.class.getName(), this.logAppender, logAppenderProperties);
 		this.gitFileMonitor.start();
 	}
 
@@ -230,9 +237,10 @@ public class DefaultOrchestrator implements Orchestrator {
 	public List<String> getLog() {
 		final List<String> list = new LinkedList<>();
 		for (final ILoggingEvent e : logAppender.list) list.add(String.format(
-				"%s *%s* %s",
-				APPENDER_DATE_FORMAT.format(new Date(e.getTimeStamp())),
+				"%s *%s* %s %s",
+				LOG_APPENDER_DATE_FORMAT.format(new Date(e.getTimeStamp())),
 				e.getLevel(),
+				e.getLoggerName().substring(e.getLoggerName().lastIndexOf('.') + 1),
 				e.getFormattedMessage()
 				));
 		return list;
