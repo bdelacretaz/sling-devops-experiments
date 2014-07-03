@@ -38,21 +38,21 @@ public class ModProxyConfigTransitioner implements ConfigTransitioner {
 	}
 
 	@Override
-	public void transition(String config, Set<String> instances) throws IOException, InterruptedException {
+	public void transition(String config, Set<String> endpoints) throws IOException, InterruptedException {
 
 		// Update config file
 		try (PrintWriter writer = new PrintWriter(this.filePath)) {
-			for (String instance : instances) {
+			for (String endpoint : endpoints) {
 				writer.println(String.format(
 						"BalancerMember %s route=%s",
-						instance.charAt(instance.length() - 1) == '/' ? // mod_proxy_balancer complains about trailing slashes
-								instance.substring(0, instance.length() - 1) :
-									instance,
-						instance.hashCode()
+						endpoint.charAt(endpoint.length() - 1) == '/' ? // mod_proxy_balancer complains about trailing slashes
+								endpoint.substring(0, endpoint.length() - 1) :
+									endpoint,
+						endpoint.hashCode()
 						));
 			}
 		}
-		logger.info("Proxy config {} rewritten for instances {}", this.filePath, instances);
+		logger.info("Proxy config {} rewritten for endpoints {}", this.filePath, endpoints);
 
 		// Relaunch proxy
 		this.execProxyCommand("graceful");

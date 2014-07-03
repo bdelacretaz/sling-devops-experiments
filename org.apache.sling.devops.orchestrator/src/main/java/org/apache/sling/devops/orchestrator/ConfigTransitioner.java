@@ -5,5 +5,5 @@ import java.util.Set;
 
 public interface ConfigTransitioner extends Closeable {
 
-	public void transition(String config, Set<String> instances) throws Exception;
+	public void transition(String config, Set<String> endpoints) throws Exception;
 }
