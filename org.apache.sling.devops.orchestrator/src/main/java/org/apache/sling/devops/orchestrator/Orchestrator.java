@@ -6,7 +6,7 @@ import java.util.Set;
 
 public interface Orchestrator {
 	public int getN();
-	public String getRunningConfig();
+	public String getActiveConfig();
 	public String getTargetConfig();
 	public Map<String, Set<String>> getConfigs();
 	public List<String> getLog();

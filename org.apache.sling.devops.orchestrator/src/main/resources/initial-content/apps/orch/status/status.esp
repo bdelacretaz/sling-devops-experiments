@@ -30,7 +30,7 @@ p {
 	margin: 0;
 	padding-left: 28px;
 }
-.running {
+.active {
 	background: #ffc;
 }
 .target {
@@ -59,7 +59,7 @@ p {
 <%
 	var orch = sling.getService(Packages.org.apache.sling.devops.orchestrator.Orchestrator);
 	var configs = new java.util.TreeMap(orch.getConfigs());
-	var runningConfig = orch.getRunningConfig();
+	var activeConfig = orch.getActiveConfig();
 	var targetConfig = orch.getTargetConfig();
 %>
 <h1>Orchestrator Status Page</h1>
@@ -70,7 +70,7 @@ p {
 			<th>Endpoints (n = <%= orch.getN() %>)</th>
 		</tr>
 <%
-	var importantConfigs = [ runningConfig, targetConfig ];
+	var importantConfigs = [ activeConfig, targetConfig ];
 	for (var i = 0; i < importantConfigs.length; i++) {
 		if (!importantConfigs[i].isEmpty() && !configs.containsKey(importantConfigs[i])) {
 			configs.put(importantConfigs[i], new java.util.HashSet());
@@ -79,7 +79,7 @@ p {
 	for (var it = configs.entrySet().iterator(); it.hasNext(); ) {
 		var config = it.next();
 		var configClass = "";
-		if (config.getKey().equals(runningConfig)) configClass += " running";
+		if (config.getKey().equals(activeConfig)) configClass += " active";
 		if (config.getKey().equals(targetConfig)) configClass += " target";
 %>
 		<tr class="<%= configClass %>">
@@ -101,7 +101,7 @@ p {
 	}
 %>
 	</table>
-	<p><span class="box running"></span> Running config</p>
+	<p><span class="box active"></span> Active config</p>
 	<p><span class="box target"></span> Target config</p>
 </div>
 <h2>Log</h2>

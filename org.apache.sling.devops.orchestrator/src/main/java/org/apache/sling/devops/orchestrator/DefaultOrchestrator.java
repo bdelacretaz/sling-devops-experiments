@@ -95,7 +95,7 @@ public class DefaultOrchestrator implements Orchestrator {
 	private GitFileMonitor gitFileMonitor;
 	private MinionController minionController;
 	private ConfigTransitioner configTransitioner;
-	private String runningConfig = "";
+	private String activeConfig = "";
 	private String targetConfig = "";
 	private ListAppender<ILoggingEvent> logAppender = new ListAppender<>();
 
@@ -220,8 +220,8 @@ public class DefaultOrchestrator implements Orchestrator {
 	}
 
 	@Override
-	public String getRunningConfig() {
-		return this.runningConfig;
+	public String getActiveConfig() {
+		return this.activeConfig;
 	}
 
 	@Override
@@ -272,14 +272,14 @@ public class DefaultOrchestrator implements Orchestrator {
 							newConfig,
 							this.instanceManager.getEndpoints(newConfig)
 							);
-					if (!newConfig.equals(this.getRunningConfig()) && !this.instanceManager.getEndpoints(this.getRunningConfig()).isEmpty()) {
+					if (!newConfig.equals(this.getActiveConfig()) && !this.instanceManager.getEndpoints(this.getActiveConfig()).isEmpty()) {
 						try {
-							this.minionController.stopMinions(this.getRunningConfig());
+							this.minionController.stopMinions(this.getActiveConfig());
 						} catch (Exception e) {
 							logger.error("Could not stop Minions.", e);
 						}
 					}
-					this.runningConfig = newConfig;
+					this.activeConfig = newConfig;
 					return true;
 				} catch (Exception e) {
 					// TODO Auto-generated catch block
