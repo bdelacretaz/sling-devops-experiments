@@ -93,7 +93,7 @@ public class DefaultOrchestrator implements Orchestrator {
 	private InstanceMonitor instanceMonitor;
 	private InstanceManager instanceManager;
 	private GitFileMonitor gitFileMonitor;
-	private MinionController minionsController;
+	private MinionController minionController;
 	private ConfigTransitioner configTransitioner;
 	private String runningConfig = "";
 	private String targetConfig = "";
@@ -102,6 +102,7 @@ public class DefaultOrchestrator implements Orchestrator {
 	@Activate
 	public void onActivate(final ComponentContext componentContext) throws GitAPIException, IOException, InterruptedException {
 		final BundleContext bundleContext = componentContext.getBundleContext();
+
 		final Dictionary<?, ?> properties = componentContext.getProperties();
 		this.n = PropertiesUtil.toInteger(properties.get(N_PROP), N_DEFAULT);
 		this.instanceManager = new InstanceManager();
@@ -110,9 +111,10 @@ public class DefaultOrchestrator implements Orchestrator {
 		this.devopsDirectory = new File(this.slingSettingsService.getAbsolutePathWithinSlingHome(DEVOPS_DIR));
 		if (!this.devopsDirectory.exists()) this.devopsDirectory.mkdir();
 
+		// Setup minion controller
 		final String crankstartJar = bundleContext.getProperty(CrankstartConstants.CRANKSTART_JAR_PATH);
-		if (crankstartJar != null) this.minionsController = new CrankstartMinionController(crankstartJar);
-		else this.minionsController = new ManualMinionController();
+		if (crankstartJar != null) this.minionController = new CrankstartMinionController(crankstartJar);
+		else this.minionController = new ManualMinionController();
 
 		// Setup config transitioner
 		this.configTransitioner = new ModProxyConfigTransitioner(
@@ -177,7 +179,7 @@ public class DefaultOrchestrator implements Orchestrator {
 						logger.error("Could not write crank.txt file.", e);
 					}
 					try {
-						DefaultOrchestrator.this.minionsController.startMinions(
+						DefaultOrchestrator.this.minionController.startMinions(
 								config,
 								configFile.getAbsolutePath(),
 								DefaultOrchestrator.this.n - DefaultOrchestrator.this.instanceManager.getEndpoints(config).size()
@@ -195,17 +197,19 @@ public class DefaultOrchestrator implements Orchestrator {
 				this.getClass().getName(),
 				this.instanceMonitor.getClass().getName(),
 				this.gitFileMonitor.getClass().getSuperclass().getName(),
-				this.minionsController.getClass().getName(),
+				this.minionController.getClass().getName(),
 				this.configTransitioner.getClass().getName()
 				});
 		bundleContext.registerService(Appender.class.getName(), this.logAppender, logAppenderProperties);
+
+		// Let's roll!
 		this.gitFileMonitor.start();
 	}
 
 	@Deactivate
 	public void onDeactivate() throws Exception {
 		this.configTransitioner.close();
-		this.minionsController.close();
+		this.minionController.close();
 		this.gitFileMonitor.close();
 		this.instanceMonitor.close();
 	}
@@ -270,7 +274,7 @@ public class DefaultOrchestrator implements Orchestrator {
 							);
 					if (!newConfig.equals(this.getRunningConfig()) && !this.instanceManager.getEndpoints(this.getRunningConfig()).isEmpty()) {
 						try {
-							this.minionsController.stopMinions(this.getRunningConfig());
+							this.minionController.stopMinions(this.getRunningConfig());
 						} catch (Exception e) {
 							logger.error("Could not stop Minions.", e);
 						}
