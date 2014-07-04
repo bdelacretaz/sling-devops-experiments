@@ -5,3 +5,4 @@ target
 vagrant/.vagrant
 derby.log
 sling-orch-crankstart
+sling-C*
