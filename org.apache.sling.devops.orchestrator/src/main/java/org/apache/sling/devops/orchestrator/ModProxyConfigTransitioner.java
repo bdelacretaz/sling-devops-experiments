@@ -63,7 +63,7 @@ public class ModProxyConfigTransitioner implements ConfigTransitioner {
 		this.execProxyCommand("stop");
 	}
 
-	private void execProxyCommand(final String command) throws IOException {
+	private void execProxyCommand(final String command) {
 
 		final CommandLine commandLine = new CommandLine(this.baseCommandLine);
 
@@ -91,15 +91,21 @@ public class ModProxyConfigTransitioner implements ConfigTransitioner {
 				this.sudoPassword == null ? null : // stdin: feed password if available
 					new ByteArrayInputStream(this.sudoPassword.getBytes(StandardCharsets.UTF_8))
 				));
-		final int exitValue = executor.execute(commandLine);
-
-		// Log errors: ERROR level if exit code not 0, WARN level otherwise
-		if (exitValue != 0) {
-			for (final String error : errors) logger.error(error);
-			logger.error("Proxy command \"{}\" exited with value {}.", command, exitValue);
-		} else {
-			for (final String error : errors) logger.warn(error);
-			logger.info("Proxy command \"{}\" succeeded.", command);
+		
+		try {
+	        final int exitValue = executor.execute(commandLine);
+	        
+	        // Log errors: ERROR level if exit code not 0, WARN level otherwise
+	        if (exitValue != 0) {
+	            for (final String error : errors) logger.error(error);
+	            logger.error("Proxy command \"{}\" exited with value {}.", command, exitValue);
+	        } else {
+	            for (final String error : errors) logger.warn(error);
+	            logger.info("Proxy command \"{}\" succeeded.", command);
+	        }
+		} catch(IOException ioe) {
+		    logger.error("Command execution failed :" + commandLine, ioe);
 		}
+
 	}
 }
