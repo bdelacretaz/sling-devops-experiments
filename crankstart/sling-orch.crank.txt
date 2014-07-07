@@ -4,6 +4,7 @@
 
 # Set default values for our variables
 defaults port 1240
+defaults orchestrator.n 2
 defaults git_repo /Users/stetsenk/Desktop/testrepo
 defaults git_file sling-minion.crank.txt
 defaults git_period 5
@@ -51,6 +52,7 @@ config org.apache.sling.devops.orchestrator.DefaultOrchestrator
 	sling.devops.git.period = ${git_period}
 	sling.devops.git.period.unit = ${git_period_unit}
 	sling.devops.zookeeper.connString = ${zk_conn_string}
+	sling.devops.orchestrator.n = ${orchestrator.n}
 	
 config org.apache.sling.devops.orchestrator.ModProxyConfigTransitioner
     sling.devops.modproxy.httpd = ${httpd_command}
