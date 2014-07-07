@@ -9,7 +9,7 @@ defaults git_file sling-minion.crank.txt
 defaults git_period 5
 defaults git_period_unit SECONDS
 defaults zk_conn_string localhost:2181
-defaults httpd /opt/httpd-2.4.7/bin/apachectl
+defaults httpd_graceful_restart httpd -k graceful
 defaults httpd_balancer_config /private/etc/apache2/mod_proxy_balancer.conf
 
 # Set bootstrap classpath, mvn: protocol can be used
@@ -48,8 +48,10 @@ config org.apache.sling.devops.orchestrator.DefaultOrchestrator
 	sling.devops.git.period = ${git_period}
 	sling.devops.git.period.unit = ${git_period_unit}
 	sling.devops.zookeeper.connString = ${zk_conn_string}
-	sling.devops.httpd = ${httpd}
-	sling.devops.httpd.balancer.config = ${httpd_balancer_config}
+	
+config org.apache.sling.devops.orchestrator.ModProxyConfigTransitioner
+    sling.devops.modproxy.activate.command = ${httpd_graceful_restart}
+    sling.devops.httpd.balancer.config = ${httpd_balancer_config}
 
 # Install bundles
 # mvn: protocol can be used.
