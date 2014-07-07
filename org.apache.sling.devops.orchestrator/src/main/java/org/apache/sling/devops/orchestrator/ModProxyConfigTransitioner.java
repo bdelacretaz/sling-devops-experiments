@@ -5,8 +5,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.exec.CommandLine;
@@ -30,23 +32,30 @@ public class ModProxyConfigTransitioner implements ConfigTransitioner {
 	private static final Logger logger = LoggerFactory.getLogger(ModProxyConfigTransitioner.class);
 
     @Property(label = "Command to execute to activate a new load balancer config")
-    public static final String ACTIVATE_COMMAND = "sling.devops.modproxy.activate.command";
+    public static final String HTTPD = "sling.devops.modproxy.httpd";
 
     @Property(label = "Path to mod_proxy_balancer config file")
     public static final String HTTPD_BALANCER_CONFIG_PATH_PROP = "sling.devops.httpd.balancer.config";
 
-	private CommandLine commandLine;
+	private CommandLine httpdCommand;
 	private File httpdConfigFile;
 
 	@Activate
 	protected void onActivate(ComponentContext ctx) {
-	    commandLine = CommandLine.parse(
-	            PropertiesUtil.toString(ctx.getProperties().get(ACTIVATE_COMMAND), "MISSING_" + ACTIVATE_COMMAND));
+	    httpdCommand = CommandLine.parse(
+	            PropertiesUtil.toString(ctx.getProperties().get(HTTPD), "MISSING_" + HTTPD));
 	    httpdConfigFile = new File(PropertiesUtil.toString(ctx.getProperties().get(HTTPD_BALANCER_CONFIG_PATH_PROP), 
 	            "MISSING_" + HTTPD_BALANCER_CONFIG_PATH_PROP));
 	    logger.info("Activated, with command line {} and httpd config file {}", 
-	            commandLine.toString(),
+	            httpdCommand.toString(),
 	            httpdConfigFile.getAbsolutePath());
+	    
+	    try {
+	        // TODO activate once crankstart supports untranslated ${command}
+	        // this.httpd("start");
+	    } catch(Exception e) {
+	        logger.warn("httpd execution failed", e);
+	    }
 	}
 	
  	@Override
@@ -72,17 +81,23 @@ public class ModProxyConfigTransitioner implements ConfigTransitioner {
 			}
 		}
 		logger.info("Proxy config {} rewritten for endpoints {}", httpdConfigFile.getAbsolutePath(), endpoints);
-		updateLoadBalancer();
+		httpd("graceful");
 	}
 
 	@Override
 	public void close() throws IOException {
-	    // TODO do we need to stop httpd??
-		//this.execProxyCommand("stop");
+        // TODO activate once crankstart supports untranslated ${command}
+		// httpd("stop");
 	}
 
-	private void updateLoadBalancer() {
+	private void httpd(String command) {
 
+	    // Replace ${command} in configured command line
+	    final CommandLine toExecute = new CommandLine(httpdCommand);
+	    final Map<String, Object> params = new HashMap<>();
+        params.put("command", command);
+        toExecute.setSubstitutionMap(params);
+	    
 		final Executor executor = new DefaultExecutor();
 		final List<String> errors = new LinkedList<>();
 		executor.setStreamHandler(new PumpStreamHandler(
@@ -102,18 +117,18 @@ public class ModProxyConfigTransitioner implements ConfigTransitioner {
 		));
 		
 		try {
-	        final int exitValue = executor.execute(commandLine);
+	        final int exitValue = executor.execute(toExecute);
 	        
 	        // Log errors: ERROR level if exit code not 0, WARN level otherwise
 	        if (exitValue != 0) {
 	            for (final String error : errors) logger.error(error);
-	            logger.error("Proxy command \"{}\" exited with value {}.", commandLine, exitValue);
+	            logger.error("Proxy command \"{}\" exited with value {}.", toExecute, exitValue);
 	        } else {
 	            for (final String error : errors) logger.warn(error);
-	            logger.info("Proxy command \"{}\" succeeded.", commandLine);
+	            logger.info("Proxy command \"{}\" succeeded.", toExecute);
 	        }
 		} catch(IOException ioe) {
-		    logger.error("Command execution failed :" + commandLine, ioe);
+		    logger.error("Command execution failed :" + toExecute, ioe);
 		}
 
 	}

@@ -9,8 +9,11 @@ defaults git_file sling-minion.crank.txt
 defaults git_period 5
 defaults git_period_unit SECONDS
 defaults zk_conn_string localhost:2181
-defaults httpd_graceful_restart httpd -k graceful
 defaults httpd_balancer_config /private/etc/apache2/mod_proxy_balancer.conf
+
+# TODO should be httpd -k ${command}
+# but crankstart has no way of saying "do not process this" 
+defaults httpd_command httpd -k graceful
 
 # Set bootstrap classpath, mvn: protocol can be used
 classpath mvn:org.apache.felix/org.apache.felix.framework/4.4.0
@@ -50,7 +53,7 @@ config org.apache.sling.devops.orchestrator.DefaultOrchestrator
 	sling.devops.zookeeper.connString = ${zk_conn_string}
 	
 config org.apache.sling.devops.orchestrator.ModProxyConfigTransitioner
-    sling.devops.modproxy.activate.command = ${httpd_graceful_restart}
+    sling.devops.modproxy.httpd = ${httpd_command}
     sling.devops.httpd.balancer.config = ${httpd_balancer_config}
 
 # Install bundles
